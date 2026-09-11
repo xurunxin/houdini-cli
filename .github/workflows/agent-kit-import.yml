@@ -1,16 +1,59 @@
-name: Agent kit import preflight (temporary)
+name: Verify and materialize agent kit (temporary)
 on:
   push:
     branches: [automation/houdini-agent-kit-import-20260911]
-    paths: [.github/workflows/agent-kit-import.yml]
+    paths:
+      - .agent-kit-import/**
+      - .github/workflows/agent-kit-import.yml
 permissions:
-  contents: read
+  contents: write
 jobs:
-  preflight:
+  verify-import:
+    if: github.repository == 'xurunxin/houdini-cli' && github.ref == 'refs/heads/automation/houdini-agent-kit-import-20260911'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      TERM: dumb
     steps:
-      - name: Check offline build environment
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Materialize digest-locked kit and compare exact Git tree
+        run: python3 .agent-kit-import/import.py
+      - name: Verify generated docs and structural checks
         run: |
-          python3 --version
-          python3 -c "import lzma, hashlib, json; print('Agent kit import environment ready')"
+          python3 agent-kit/tools/rebuild_wiki.py --check
+          python3 agent-kit/tools/validate_kit.py agent-kit
+      - name: Run 64 offline kit tests
+        working-directory: agent-kit
+        run: python3 -m unittest discover -s tests -v
+      - name: Check installed query entry point
+        run: |
+          mkdir -p "$RUNNER_TEMP/houdini-kit-smoke"
+          python3 agent-kit/tools/install_kit.py --target "$RUNNER_TEMP/houdini-kit-smoke" --agent codex --profile core
+          python3 "$RUNNER_TEMP/houdini-kit-smoke/.agents/skills/houdini-agent/tools/query.py" search '布料穿透' --limit 3
+      - name: Install existing CLI dependencies without install hooks
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run existing CLI test suite
+        run: npm test
+      - name: Check existing CLI and npm package
+        run: |
+          npm run check
+          npm pack --dry-run
+      - name: Publish verified content to temporary branch only
+        run: |
+          set -euo pipefail
+          git add -- agent-kit README.md
+          test "$(git write-tree --prefix=agent-kit/)" = '5de353d1bcd1570122beae0b215816546b1a10ba'
+          git diff --cached --name-only | grep -Ev '^(agent-kit/|README[.]md$)' && exit 1 || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: materialize and verify Houdini Agent Kit'
+          git push origin HEAD:refs/heads/automation/houdini-agent-kit-import-20260911
+          git rev-parse HEAD
+          git rev-parse HEAD:agent-kit
+          git rev-parse HEAD:README.md
