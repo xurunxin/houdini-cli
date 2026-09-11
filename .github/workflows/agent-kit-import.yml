@@ -1,0 +1,16 @@
+name: Agent kit import preflight (temporary)
+on:
+  push:
+    branches: [automation/houdini-agent-kit-import-20260911]
+    paths: [.github/workflows/agent-kit-import.yml]
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check offline build environment
+        run: |
+          python3 --version
+          python3 -c "import lzma, hashlib, json; print('Agent kit import environment ready')"
