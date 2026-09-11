@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "scope": "temporary project; Python offline only; no Houdini execution",
+  "checks": [
+    {
+      "check": "core_dry_run",
+      "ok": true,
+      "files": {
+        "install": 109,
+        "update": 0,
+        "unchanged": 0
+      }
+    },
+    {
+      "check": "core_install",
+      "ok": true,
+      "files": {
+        "install": 109,
+        "update": 0,
+        "unchanged": 0
+      }
+    },
+    {
+      "check": "idempotence",
+      "ok": true,
+      "files": {
+        "install": 0,
+        "update": 0,
+        "unchanged": 109
+      }
+    },
+    {
+      "check": "installed_query",
+      "query": "布料穿透",
+      "ok": true,
+      "top_id": "recipe-cloth-penetration"
+    },
+    {
+      "check": "installed_query",
+      "query": "USD材质不生效",
+      "ok": true,
+      "top_id": "recipe-usd-binding"
+    },
+    {
+      "check": "installed_query",
+      "query": "烟不显示",
+      "ok": true,
+      "top_id": "recipe-smoke-invisible"
+    },
+    {
+      "check": "installed_query",
+      "query": "工具超时",
+      "ok": true,
+      "top_id": "recipe-timeout-recovery"
+    },
+    {
+      "check": "all_profiles_both_agents",
+      "ok": true,
+      "files": {
+        "install": 147,
+        "update": 0,
+        "unchanged": 109
+      }
+    },
+    {
+      "check": "original_houdini_cli_skill_preserved",
+      "ok": true
+    }
+  ]
+}

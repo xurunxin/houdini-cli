@@ -1,0 +1,15 @@
+{
+  "task": "smoke01",
+  "size": [
+    1,
+    2,
+    1
+  ],
+  "translate": [
+    0,
+    1,
+    0
+  ],
+  "allow_write": false,
+  "allow_cook": false
+}

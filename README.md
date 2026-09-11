@@ -83,6 +83,22 @@ skills 默认安装到调用者项目 `.agents/skills/houdini-cli/SKILL.md`；`-
 
 状态默认位于用户本地数据目录 `houdini-cli`；支持 `--home <directory>` 或 `HOUDINI_CLI_HOME`。`config` 查看实际配置。
 
+## Houdini Agent Wiki 与领域 Skills
+
+[Houdini Agent Kit](agent-kit/README.md) 提供 32 个领域入口、40 个任务配方、20 个可选 Skills、HOM/VEX 示例及离线检索和验收工具。它是 CLI 之上的知识层，沿用实时工具发现和任务级会话，不修改现有 `houdini-cli` Skill 或 MCP 配置。
+
+从仓库根目录使用（Python 3.10+；目标项目目录须已存在）：
+
+```powershell
+python agent-kit/tools/install_kit.py --target "D:/MyProject" --agent codex --profile core --dry-run
+python agent-kit/tools/install_kit.py --target "D:/MyProject" --agent codex --profile core
+python agent-kit/skills/houdini-agent/tools/query.py search "布料穿透" --limit 3
+```
+
+推荐 `core`，仅激活一个路由 Skill，但保留全部知识。`--profile all --agent all` 可安装所有领域 Skills 到 Codex 与 Claude 项目目录。本知识包从仓库检出目录安装，不包含在现有 npm 发布文件集合中；原 `houdini-cli skills install` 仍只安装原来的 CLI Skill。
+
+[Wiki 目录](agent-kit/skills/houdini-agent/wiki/README.md) · [集成说明](agent-kit/INTEGRATION.md) · [验收边界](agent-kit/VALIDATION.md)。知识库和离线测试不代表已通过 Houdini 场景编辑、模拟或渲染验收。
+
 ## 开发和验收
 
 ```powershell

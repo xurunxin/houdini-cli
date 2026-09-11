@@ -1,0 +1,10 @@
+// Point Wrangle. Required: nonzero point N; source prototype points along +Z.
+// Does not define continuous roll along a path; use an N/up frame for that requirement.
+// Source: S-DIHEDRAL, S-COPY. p@orient is a vector4 quaternion, not vector3 Euler angles.
+if (haspointattrib(0, "N") && length2(v@N) > 1e-12) {
+    p@orient = dihedral(set(0.0, 0.0, 1.0), normalize(v@N));
+    i@agent_invalid_normal = 0;
+} else {
+    p@orient = set(0.0, 0.0, 0.0, 1.0);
+    i@agent_invalid_normal = 1; // Explicit fallback; not proof orientation is acceptable.
+}
