@@ -71,10 +71,36 @@ class ResultTests(unittest.TestCase):
     def test_marker_failure(self):
         v={'ok':True,'result':{'content':[{'type':'text','text':'HOUDINI_AGENT_RESULT={"ok":false,"error":"permission required"}'}]}}
         self.assertEqual(I.inspect(v)['status'],'failed')
+    def test_prose_error_wins_over_stdout_success_marker(self):
+        v={'ok':True,'result':{'content':[{'type':'text','text':'Error (houdini): failed after stdout HOUDINI_AGENT_RESULT={"ok":true}'}]}}
+        self.assertEqual(I.inspect(v)['status'],'failed')
+    def test_multiple_markers_are_not_success(self):
+        v={'ok':True,'result':{'content':[{'type':'text','text':'HOUDINI_AGENT_RESULT={"ok":true}\nHOUDINI_AGENT_RESULT={"ok":false}'}]}}
+        self.assertEqual(I.inspect(v)['status'],'unknown')
     def test_pinned_prose_error(self):
         v={'ok':True,'result':{'content':[{'type':'text','text':'Error (houdini): Bad input'}]}}
         self.assertEqual(I.inspect(v)['status'],'failed')
     def test_nontext_unknown(self):self.assertEqual(I.inspect({'ok':True,'result':{'content':[{'type':'image','data':'...'}]}})['status'],'unknown')
+    def test_batch_unknown_item_cannot_borrow_success(self):
+        for unknown in ({}, {'isError':False}, {'status':'pending'}):
+            payload={'ok':True,'results':[self.wrap({'ok':True}),self.wrap(unknown)]}
+            with self.subTest(unknown=unknown):self.assertEqual(I.inspect(payload)['status'],'unknown')
+    def test_all_batch_items_report_success(self):
+        payload={'ok':True,'results':[self.wrap({'ok':True}),self.wrap({'status':'success'})]}
+        self.assertEqual(I.inspect(payload)['status'],'reported_success')
+    def test_unknown_mcp_representation_cannot_borrow_success(self):
+        payload=self.wrap({'ok':True})
+        payload['result']['structuredContent']={}
+        self.assertEqual(I.inspect(payload)['status'],'unknown')
+    def test_empty_or_malformed_result_arrays_are_unknown(self):
+        for field in ('content','results'):
+            for value in ([], {}, None):
+                with self.subTest(field=field,value=value):
+                    self.assertEqual(I.inspect({'ok':True,'result':{'status':'success',field:value}})['status'],'unknown')
+    def test_pending_child_is_not_completed(self):
+        self.assertEqual(I.inspect(self.wrap({'status':'success','result':{'status':'pending'}}))['status'],'unknown')
+    def test_bare_mcp_error_is_failed(self):
+        self.assertEqual(I.inspect({'isError':True})['status'],'failed')
 class SequenceTests(unittest.TestCase):
     def test_complete(self):
         with tempfile.TemporaryDirectory() as td:
@@ -111,6 +137,10 @@ class AcceptanceTests(unittest.TestCase):
     def report(self,status,evidence=None):return {'task':'test','checks':[{'layer':'technical','criterion':'file check','status':status,'evidence':evidence or []}]}
     def test_unknown(self):
         with tempfile.TemporaryDirectory() as td:self.assertEqual(A.check(self.report('unknown'),Path(td))['status'],'unknown')
+    def test_malformed_status_is_invalid(self):
+        with tempfile.TemporaryDirectory() as td:
+            for state in ([], {}, None, True):
+                with self.subTest(state=state):self.assertEqual(A.check(self.report(state),Path(td))['status'],'invalid')
     def test_pass_needs_evidence(self):
         with tempfile.TemporaryDirectory() as td:self.assertEqual(A.check(self.report('pass'),Path(td))['status'],'invalid')
     def test_evidence_presence_not_semantics(self):

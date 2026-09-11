@@ -1,6 +1,7 @@
 from __future__ import annotations
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -50,6 +51,19 @@ class ContentTests(unittest.TestCase):
             I.install(ROOT, target, agent='all', profile='all')
             for agent in ('.agents', '.claude'):
                 self.assertEqual(len(list((target/agent/'skills').glob('*/SKILL.md'))), 20)
+    def test_query_json_is_utf8_under_legacy_pipe_encodings(self):
+        tool=ROOT/'skills/houdini-agent/tools/query.py'
+        for encoding in ('ascii','cp936'):
+            env=dict(os.environ, PYTHONIOENCODING=encoding, PYTHONUTF8='0')
+            with self.subTest(encoding=encoding):
+                result=subprocess.run([sys.executable,str(tool),'search','布料穿透 🎬','--limit','1'],
+                                      env=env,capture_output=True,check=True)
+                data=json.loads(result.stdout.decode('utf-8'))
+                self.assertEqual(data['query'],'布料穿透 🎬')
+                self.assertEqual(data['results'][0]['skill'],'houdini-vellum')
+                error=subprocess.run([sys.executable,str(tool),'show','不存在 🎬'],env=env,capture_output=True)
+                self.assertEqual(error.returncode,2)
+                self.assertIn('不存在 🎬',json.loads(error.stderr.decode('utf-8'))['error'])
     def test_embedded_skill_count(self):
         self.assertEqual(sum(d['kind']=='skill' for d in S.collect(ROOT)), 20)
     def test_no_control_characters_in_markdown(self):

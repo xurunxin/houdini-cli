@@ -46,4 +46,7 @@ def main(argv=None):
         print(json.dumps(report,ensure_ascii=False,indent=2));return 0 if report['ok'] else 1
     except (OSError,ValueError) as e:
         print(json.dumps({'ok':False,'error':str(e)},ensure_ascii=False),file=sys.stderr);return 2
-if __name__=='__main__':raise SystemExit(main())
+if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+    raise SystemExit(main())

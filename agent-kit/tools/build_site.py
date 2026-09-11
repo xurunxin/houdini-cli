@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import posixpath
 import re
+import sys
 from urllib.parse import quote, unquote, urlsplit
 
 
@@ -210,7 +211,7 @@ def build(root: Path, output: Path) -> dict:
     page = TEMPLATE.replace('__DOCUMENTS__', payload)
     if output.is_symlink():
         raise ValueError('Refusing to replace symlink output')
-    output.write_text(page, encoding='utf-8')
+    output.write_text(page, encoding='utf-8', newline='\n')
     return {'ok': True, 'output': str(output), 'embedded_documents': len(documents), 'bytes': output.stat().st_size,
             'runtime_testing': 'not performed; reader contains existing evidence boundaries'}
 
@@ -229,4 +230,6 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
     raise SystemExit(main())

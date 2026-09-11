@@ -12,7 +12,7 @@ def check(report:dict,base:Path)->dict:
     for i,item in enumerate(report['checks']):
         if not isinstance(item,dict):errors.append(f'checks[{i}] is not an object');continue
         state=item.get('status')
-        if state not in counts:errors.append(f'checks[{i}] invalid status');continue
+        if not isinstance(state,str) or state not in counts:errors.append(f'checks[{i}] invalid status');continue
         counts[state]+=1
         if not item.get('criterion') or item.get('layer') not in ('technical','temporal','visual'):
             errors.append(f'checks[{i}] requires criterion and valid layer')
@@ -37,4 +37,7 @@ def main(argv=None):
         print(json.dumps(result,ensure_ascii=False,indent=2));return {'reported_pass':0,'fail':1,'invalid':2,'unknown':3}[result['status']]
     except (OSError,ValueError) as e:
         print(json.dumps({'status':'invalid','error':str(e)},ensure_ascii=False),file=sys.stderr);return 2
-if __name__=='__main__':raise SystemExit(main())
+if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+    raise SystemExit(main())

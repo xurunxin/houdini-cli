@@ -14,7 +14,7 @@ v0.1 自动化检查详情保存在 `validation/`。离线测试不启动 Houdin
 
 当前构建环境无 Houdini / hython，因此没有执行 HOM API、创建真实 SOP 网络、编译 VEX、模拟 Vellum/Pyro/FLIP/MPM、渲染 Karma，或读回真实 HIP/USD/几何缓存。示例中的参数与 API 路线来自已核对文档，但仍须在目标版本运行后才可升级验证状态。
 
-安装逻辑在 Linux / Python 环境完成离线测试。Windows PowerShell、Houdini 许可证类型、GUI/无界面环境、GPU 及驱动兼容需要各自现场验证；没有将 Linux 测试冒充 Windows 验收。
+原始安装逻辑在 Linux / Python 环境完成离线测试；本次 PR 审查补充 Windows / Linux 离线安装和查询测试。Houdini 许可证类型、GUI/无界面环境、GPU 及驱动兼容仍需各自现场验证。
 
 按 [现场测试矩阵](skills/houdini-agent/wiki/target-smoke.md) 推进。示例默认保守：写场景和触发 cook 需要配置授权；不会保存、清空、删除场景或直接发起全序列渲染。配置授权不能取代真实用户许可。
 
@@ -47,4 +47,26 @@ python tools/build_site.py
 
 此次集成重新运行 Python 离线测试、生成同步检查、结构/本地链接检查、HTML 重建和临时项目安装查询。结果分别记录在 `validation/pr-unittest.txt`、`validation/pr-generated-sync.json`、`validation/pr-structure.json` 和 `validation/pr-install-smoke.json`。
 
-原始 `validation/browser.json` 是 v0.1 阅读器的历史验收；本次未重新执行浏览器或 Houdini 现场测试。离线 HTML 从同一构建器重建，未修改浏览器代码。集成过程保留原始来源、配方和示例验证等级。
+原始 `validation/browser.json` 是 v0.1 阅读器的历史验收；初次集成没有重新执行浏览器或 Houdini 现场测试。之后的 PR 审查结果见下节。来源、配方和示例的验证等级保持不变。
+
+## PR 审查修复与最终验证（2026-09-11）
+
+- Python 命令入口显式输出 UTF-8，修复 Windows 管道中的中文 JSON 解码失败；回归测试包含 ASCII / CP936 管道和中文、emoji。
+- 结果检查器逐一判断批次项及 MCP 表示，未知结果、空数组和 pending 状态不能借用其他项的成功标记；外层错误文本优先于 stdout 的成功标记，多标记返回 unknown。
+- 安装器在 dry-run 和实际写入前检查目标祖先与备份路径，普通文件、symlink/junction 等冲突不会导致已知的部分安装。运行时变化和 I/O 失败仍不具备整包事务回滚。
+- 验收清单中的数组或对象 status 返回 invalid JSON 结果，不再抛出未处理的 TypeError。
+- `tests/app.test.mjs` 按宿主平台创建 Houdini/hython 测试文件，修复 Ubuntu 上原有的三项 fixture 失败；CLI 实现和依赖未改动。
+- HTML 构建器固定 LF 换行，保持 Windows / Linux 重建内容一致。
+
+| 检查 | 审查后结果 |
+| --- | --- |
+| Python unittest | Windows / Python 3.13.15、WSL Ubuntu / Python 3.14.4：各 77 项通过，含真实包安装与查询 |
+| CLI unittest | Windows / Node 24.20.0、Linux 容器 / Node 22.23.2：各 30 项通过 |
+| CLI 语法与原 Skill 检查 | Windows / Linux 通过 |
+| npm pack --dry-run | 通过；仍由仓库检出安装知识包 |
+| 阅读器 | Windows Chrome 152：11 项通过；实际 file URL、桌面 1440px / 移动 390px、无 JS 错误或外部请求，截图已查看 |
+| 生成同步、结构与内容清单 | 通过；重建 HTML 并重新生成 MANIFEST.sha256 |
+
+结果文件：[Windows Python](validation/review-unittest-windows.txt)、[Linux Python](validation/review-unittest-linux.txt)、[阅读器](validation/review-browser.json)、[复核摘要](validation/review-summary.json)。
+
+初次 Windows CLI 全量运行曾出现已有会话初始化测试超时；该测试在未改动的主分支及 PR 分支单独运行均通过，最终全量运行也通过，未为此扩大运行时代码修改范围。所有 Houdini HOM/VEX、模拟与渲染现场验收仍未执行。

@@ -23,7 +23,7 @@ Agent 入口：[houdini-agent/SKILL.md](skills/houdini-agent/SKILL.md)。
 
 **知识不是运行证据。** 本环境无 Houdini/hython。HOM 示例只完成离线语法及可测试保护逻辑检查，VEX 未在 Houdini 编译，FX/渲染没有现场验收。源代码仓库自身已有只读查询验收，但不能据此宣称这些新配方已运行。详见 [VALIDATION](VALIDATION.md)。
 
-v0.1 已通过 **64 项离线测试**与 **11 项阅读器检查**；本次仓库接入重新运行离线测试、生成同步检查和实包安装查询。阅读器的 11 项记录来自 v0.1 构建，未作为本次新跑结果。详情见验收记录。
+PR 审查修复后通过 **77 项离线测试（Windows / Linux）**与 **11 项阅读器检查（Windows Chrome，实际 file URL）**，并复核生成同步和实包安装查询。原始 v0.1 的 64 项测试记录仍保留为历史证据；当前结果见 [验收记录](VALIDATION.md)。
 
 ## 安装到项目
 

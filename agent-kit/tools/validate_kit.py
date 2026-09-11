@@ -82,4 +82,7 @@ def main(argv=None):
     text=json.dumps(report,ensure_ascii=False,indent=2)
     if a.output:a.output.write_text(text+'\n',encoding='utf-8')
     print(text);return 0 if report['ok'] else 1
-if __name__=='__main__':raise SystemExit(main())
+if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+    raise SystemExit(main())

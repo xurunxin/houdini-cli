@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "browser": "Chrome/152.0.7977.83",
+  "scope": "headless Chrome; actual file URL; generated local wiki",
+  "checks": [
+    "file URL loads the self-contained reader",
+    "Chinese cloth search",
+    "search result routes to the recipe",
+    "English USD search",
+    "20 skills in filter",
+    "empty state",
+    "local Markdown link routes inside reader",
+    "desktop fits viewport",
+    "mobile fits viewport",
+    "no JavaScript errors",
+    "no external requests"
+  ]
+}

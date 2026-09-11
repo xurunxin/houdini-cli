@@ -24,9 +24,12 @@ def unsafe_link(p:Path)->bool:
 def safe_path(root:Path,path:Path)->None:
     if not path.is_relative_to(root):raise ValueError(f'path outside target: {path}')
     current=root
-    for part in path.relative_to(root).parts:
+    parts=path.relative_to(root).parts
+    for index,part in enumerate(parts):
         current=current/part
         if unsafe_link(current):raise ValueError(f'symlink/junction/reparse point rejected: {current}')
+        if index<len(parts)-1 and current.exists() and not current.is_dir():
+            raise ValueError(f'target parent is not a directory: {current}')
     if not path.resolve().is_relative_to(root):raise ValueError(f'resolved path escapes target: {path}')
 
 def sha(p:Path)->str:
@@ -65,6 +68,9 @@ def install(source:Path,target:Path,agent:str='codex',profile:str='core',force:b
     run=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8]
     backup=root/'.houdini-agent-kit-backups'/run
     completed=[]
+    if any(item['status']=='update' for item in plan):
+        safe_path(root,backup)
+        if backup.exists() and not backup.is_dir():raise ValueError(f'backup root is not a directory: {backup}')
     if not dry_run:
         try:
             for item in plan:
@@ -106,4 +112,8 @@ def main(argv=None):
         print(json.dumps(report,ensure_ascii=False,indent=2));return 0
     except (ValueError,OSError,RuntimeError) as e:
         print(json.dumps({'ok':False,'error':str(e)},ensure_ascii=False),file=sys.stderr);return 2
-if __name__=='__main__':raise SystemExit(main())
+if __name__=='__main__':
+    for stream in (sys.stdout,sys.stderr):
+        try:stream.reconfigure(encoding='utf-8')
+        except (AttributeError,OSError,ValueError):pass
+    raise SystemExit(main())

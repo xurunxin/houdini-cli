@@ -25,10 +25,30 @@ class InstallTests(unittest.TestCase):
         p=self.target/'.agents/skills/houdini-agent/wiki/test.md';p.parent.mkdir(parents=True);p.write_text('custom')
         with self.assertRaises(ValueError):M.install(self.source,self.target)
         self.assertFalse((self.target/'.agents/skills/houdini-agent/SKILL.md').exists());self.assertEqual(p.read_text(),'custom')
+    def test_non_directory_agent_parent_rejected_before_writes(self):
+        p=self.target/'.claude';p.write_text('custom')
+        for dry_run in (True,False):
+            with self.subTest(dry_run=dry_run),self.assertRaises(ValueError):
+                M.install(self.source,self.target,agent='all',profile='all',dry_run=dry_run)
+        self.assertFalse((self.target/'.agents').exists());self.assertEqual(p.read_text(),'custom')
     def test_force_backup(self):
         M.install(self.source,self.target);p=self.target/'.agents/skills/houdini-agent/wiki/test.md';p.write_text('custom')
         r=M.install(self.source,self.target,force=True);self.assertIsNotNone(r['backup']);backup=Path(r['backup'])/'.agents/skills/houdini-agent/wiki/test.md'
         self.assertEqual(backup.read_text(),'custom');self.assertEqual(p.read_text(),'knowledge')
+    def test_force_backup_root_must_be_directory(self):
+        M.install(self.source,self.target);p=self.target/'.agents/skills/houdini-agent/wiki/test.md';p.write_text('custom')
+        backup=self.target/'.houdini-agent-kit-backups';backup.write_text('keep')
+        for dry_run in (True,False):
+            with self.subTest(dry_run=dry_run),self.assertRaises(ValueError):M.install(self.source,self.target,force=True,dry_run=dry_run)
+        self.assertEqual(p.read_text(),'custom');self.assertEqual(backup.read_text(),'keep')
+    def test_force_backup_root_link_rejected(self):
+        M.install(self.source,self.target);p=self.target/'.agents/skills/houdini-agent/wiki/test.md';p.write_text('custom')
+        outside=self.base/'outside';outside.mkdir();backup=self.target/'.houdini-agent-kit-backups'
+        try:backup.symlink_to(outside,target_is_directory=True)
+        except OSError:self.skipTest('symlink unavailable')
+        for dry_run in (True,False):
+            with self.subTest(dry_run=dry_run),self.assertRaises(ValueError):M.install(self.source,self.target,force=True,dry_run=dry_run)
+        self.assertEqual(p.read_text(),'custom');self.assertEqual(list(outside.iterdir()),[])
     def test_preserve_original_cli_and_unknown(self):
         for path in ['.agents/skills/houdini-cli/SKILL.md','.agents/skills/houdini-agent/custom.txt']:
             p=self.target/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('keep')
