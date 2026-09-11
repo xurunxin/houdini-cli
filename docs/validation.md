@@ -1,5 +1,14 @@
 # Validation — 2026-09-11
 
+## v0.2 task lifecycle
+
+- A named task reused the existing Houdini GUI and single-client bridge without restarting the application.
+- Separate `get_scene_info` and tool-schema CLI invocations shared one MCP process (PID 30240 during this acceptance).
+- `session end` closed the task MCP and retained Houdini and its bridge.
+- Shared tests cover task reuse, active-request protection, timeout without replay/reconnect, idle-only MCP cleanup, startup failure and ownership-safe native close. Headless application closure remains explicitly retained because there is no generic save-preserving native window close.
+
+## v0.1 bootstrap baseline
+
 Platform: Windows, Node.js 24.20.0, Houdini 22.0.368 (Python 3.13.10 / PySide6 6.8.3).
 
 - Clean installation: an isolated alternate CLI home fetched pinned upstream commit `de4fd93acc207fc57c02b330d421461f5963a945`, installed pinned Python requirements, imported its generated MCP bridge, and launched a headless Houdini instance. A live `get_scene_info` call succeeded against `untitled.hip`. That test-owned application process was then stopped.

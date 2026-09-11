@@ -1,6 +1,28 @@
 # houdini-cli
 
-将 Houdini MCP 转为按需 CLI。Agent 从终端发现实时工具 schema 并执行操作，命令完成、失败或超时后关闭自己的 MCP 子进程；Houdini 与应用内本机桥接单独运行。
+以目标任务管理 houdini-cli 的应用和 MCP 生命周期。任务内复用同一应用和 MCP 进程，按目标完成、资源占用和用户后续使用决定保留或关闭。
+
+## 推荐任务流程（v0.2）
+
+```powershell
+houdini-cli session start shot-01 --launch-app
+houdini-cli --session shot-01 tools list
+houdini-cli --session shot-01 tools inspect <工具名>
+houdini-cli --session shot-01 tools call <工具名> --args-file args.json
+houdini-cli session status shot-01
+# 目标完成：释放 MCP，应用继续保留
+houdini-cli session end shot-01
+# 确认本任务启动的应用无未保存工作且不再需要时
+# houdini-cli session end shot-01 --close-app
+```
+
+`--launch-app` 优先复用已有应用，只在没有对应应用时启动并记录进程归属。同名 start 幂等复用会话；一个 CLI 状态目录同时服务一个目标任务，其他目标会返回冲突。任务期间工具命令加 `--session`；已有会话时，省略该参数会失败，避免另开 MCP 抢占应用桥接。
+
+`session end` 默认只关闭 MCP。`--close-app` 仅正常关闭本任务启动、PID/路径/创建时间仍匹配的 Windows GUI；原生保存提示不会被绕过。复用的应用、身份不明的进程、后台应用及不支持的平台均保留，并返回原因。Agent 应先检查未保存内容、后台渲染/cook 和后续用途，再决定关闭时机。应用桥接随应用保留。
+
+会话仅在任务请求下创建，通过本机带随机凭据的通道供 CLI 调用，不注册为固定 Codex MCP。默认空闲 1800 秒回收 MCP，`session start --idle-timeout <seconds>` 可调整（1..86400）；进行中的请求不触发空闲回收。空闲回收、异常和中断均保留应用。超时后不自动重启/重试，先检查实际操作结果。
+
+无任务会话时仍支持一次性 `tools/call/batch`；它们只在该次命令期间运行 MCP。下面的单次示例也可在命令前加入 `--session <task>`，在任务内复用连接。
 
 ## 安装和初始化
 
@@ -43,7 +65,7 @@ houdini-cli tools call <工具名> --args-file args.json
 
 `batch calls.json` 接受 `[{"tool":"名称","args":{}}]`，顺序运行并共享一个短暂 MCP 会话。首个错误停止并报告已完成项；应用改动不自动回滚。`resources list/read` 访问上游支持的资源。
 
-JSON stdout 返回业务结果，`--verbose` 向 stderr 输出上游诊断。退出码 `0` 成功，`1` 环境/运行/工具错误，`2` 参数错误。MCP `isError` 转成 `TOOL_ERROR` 并保留内容。默认会话超时 60 秒，用 `--timeout 180000` 调整；超时/中断后先查询节点和场景状态，再决定是否重试，避免重复渲染或修改。
+JSON stdout 返回业务结果，`--verbose` 向 stderr 输出上游诊断。退出码 `0` 成功，`1` 环境/运行/工具错误，`2` 参数错误。MCP `isError` 转成 `TOOL_ERROR` 并保留内容。一次性会话默认超时 60 秒，任务模式每个请求默认超时 60 秒，用 `--timeout 180000` 调整；超时/中断后先查询节点和场景状态，再决定是否重试，避免重复渲染或修改。
 
 ## 项目 skills 与迁移
 

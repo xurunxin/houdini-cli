@@ -1,9 +1,9 @@
 # Houdini setup
 
-`houdini-cli` uses two local processes:
+`houdini-cli` separates the application bridge from its MCP runtime:
 
 1. Houdini runs a TCP bridge on `127.0.0.1:9877`.
-2. Each `houdini-cli tools ...` command starts a short-lived MCP stdio process, performs one request, and closes it.
+2. `session start <task>` keeps one MCP stdio process for the target task. Commands using `--session <task>` reuse that connection until `session end` or idle cleanup. Without a task session, a one-shot command closes its own MCP process after the request.
 
 The Houdini application remains open when the stdio process exits. The TCP bridge is intentionally loopback-only because the upstream tool set includes scene changes and arbitrary Houdini Python execution.
 
