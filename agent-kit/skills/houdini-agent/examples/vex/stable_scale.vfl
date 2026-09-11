@@ -1,0 +1,10 @@
+// Point Wrangle. Required: point int id, stable and unique across changing topology.
+// Parameters: none. Fixed seed and range are authored example choices, not universal settings.
+// Sources: S-VEX, S-COPY, J-ATTR. Not compiled in Houdini by this kit build.
+if (haspointattrib(0, "id")) {
+    float u = rand(float(i@id) + 193.0);
+    f@pscale = fit01(u, 0.08, 0.15);
+    i@agent_missing_id = 0;
+} else {
+    i@agent_missing_id = 1; // Fail acceptance upstream; do not silently fall back to ptnum.
+}

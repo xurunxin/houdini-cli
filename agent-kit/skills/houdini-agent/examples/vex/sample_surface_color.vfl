@@ -1,0 +1,13 @@
+// Point Wrangle. Input0: target points. Input1: non-empty polygon surface with POINT vector Cd.
+// Both inputs must use the same coordinate space. Primitive UV != texture UV.
+// Sources: S-XYZDIST, S-PRIMUV. Not appropriate for packed/unloaded/unsupported primitive surfaces.
+if (nprimitives(1) > 0 && haspointattrib(1,"Cd")) {
+    int prim = -1;
+    vector uvw = {0,0,0};
+    float distance = xyzdist(1,@P,prim,uvw);
+    if (prim >= 0) {
+        v@Cd = primuv(1,"Cd",prim,uvw);
+        f@agent_sample_distance = distance;
+        i@agent_sample_failed = 0;
+    } else { i@agent_sample_failed = 1; }
+} else { i@agent_sample_failed = 1; }

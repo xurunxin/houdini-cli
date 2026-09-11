@@ -1,0 +1,8 @@
+// Point Wrangle INSIDE Solver SOP on the previous-state stream.
+// Input0: previous state with stable topology and float growth initialized BEFORE solver.
+// Requires float rate in world-independent units/second (created upstream, not a missing channel).
+// Sources: C-SOLVER, S-VEX. Assumes one invocation per solver time increment; avoid extra feedback.
+if (haspointattrib(0,"growth") && haspointattrib(0,"rate")) {
+    f@growth = clamp(f@growth + max(f@rate,0.0) * @TimeInc,0.0,1.0);
+    i@agent_growth_missing = 0;
+} else { i@agent_growth_missing = 1; }
