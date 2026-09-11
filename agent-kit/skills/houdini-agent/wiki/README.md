@@ -2,7 +2,7 @@
 
 32 个领域入口 · 40 个任务配方 · 81 条来源 · 2026-09-11
 
-先读 [快速上手](quickstart.md)、[CLI 契约](02-cli-contract.md) 和 [已核对工具候选](tool-map.md)。这里只按需阅读，不要求 Agent 预载全库。
+按目标选择下方领域或配方；已有准确入口时直接打开。首次接入现场时看 [快速上手](quickstart.md) 和 [CLI 契约](02-cli-contract.md)，查找工具候选时看 [工具映射](tool-map.md)。知识查询不启动 Houdini，不预载全库。
 
 ## 覆盖等级
 `guide`：原理、输入、操作策略与验收；`discovery`：复杂/新领域的路由与继续阅读入口；`recipe-design-not-runtime-tested`：有任务步骤，尚无目标 Houdini 运行证据。示例通过离线检查不等于效果运行通过。

@@ -1,28 +1,38 @@
 ---
 name: houdini-cli
-description: 通过 houdini-cli 按需查询或修改 Houdini 节点网络、执行场景脚本，以及初始化 Houdini MCP、启动应用桥接和诊断环境。
+description: 使用 houdini-cli 调用现场工具、管理任务会话与应用桥接，或诊断初始化和连接问题。
 ---
 
-使用终端中的 `houdini-cli`。以用户的目标任务为生命周期单位：任务内复用应用、桥接和 MCP，避免每个工具调用重新启动它们。
+# Houdini CLI
 
-多步骤任务先 `session status` 查看已有会话，然后 `session start <task-name> --launch-app`。同名任务复用会话；应用已运行时优先复用。不同目标占用同一个 CLI 状态目录时返回冲突，应协调原任务，不能结束它来抢占连接。环境只在缺失或损坏时 setup，无需每个任务重新安装。
+使用终端中的 `houdini-cli`。知识问答或文稿编辑无需连接 Houdini。实际操作以用户目标为会话单位，任务内复用应用、桥接与 MCP；只读取当前模式需要的说明。
 
-任务中的工具命令都带 `--session <task-name>`，例如 `houdini-cli --session shot-01 tools list` 和 `houdini-cli --session shot-01 tools call <name> --args-file args.json`。规划、检查、修改、渲染、验收和短暂停顿期间保持会话。简单的单次只读查询可以使用没有会话的一次性调用；已有任务会话时 CLI 会阻止另开一次性 MCP。
+## 调用现场工具
 
-任务完成后选择释放时机：
+多步骤操作先 `session status`，再 `session start <task-name> --launch-app`；同名任务复用会话，应用已运行时优先复用。其他目标占用同一状态目录会冲突，协调原任务，不能结束它来抢连接。单次只读查询可用无会话调用；已有任务会话时 CLI 会阻止另开一次性 MCP。
 
-- 仍有相关步骤、短期继续处理或正在渲染/cook 时保留任务会话。用 `session status` 检查忙闲状态；进行中的请求不会因空闲超时被关闭。
-- 目标已验收且暂时不用 MCP 时执行 `session end <task-name>`，释放 MCP 并保留应用与桥接。
-- 只有本任务启动的应用、任务已完成、没有未保存内容/后台工作且不再需要交给用户继续使用时，才考虑 `session end <task-name> --close-app`。它核验进程归属，只发送正常窗口关闭请求，保留原生保存提示；返回保留/待处理状态就如实报告，不强杀、不自动丢弃内容。
+任务内所有工具命令带 `--session <task-name>`。先 `tools list`，再 `tools inspect <实际名称>` 取输入 schema；同一环境已核对的 schema 可复用，环境变更后重新发现。候选工具名不保证存在。
 
-用户原先打开或其他任务使用的应用保持打开。无归属证据和后台模式应用不会被自动关闭。默认 MCP 空闲回收为 30 分钟，可在 start 时用 `--idle-timeout <seconds>` 调整；回收只影响 MCP，不关闭应用。会话失联/调用超时先核对应用状态，显式重新建立会话时不重放已提交操作。
+用 `tools call <name> --args-file <file>` 传 UTF-8 JSON 对象，或用 `--stdin`；`call` 是简写。`batch <file>` 格式为 `[{"tool":"名称","args":{}}]`，按顺序执行、首错停止、没有回滚。同一桥接的调用保持串行。
 
-尚未初始化时运行 `doctor`；缺环境时检查 `setup --help`，再执行 `setup`。有现成定制 MCP 时用 `setup --source <directory>` 复用它，CLI 将依赖和兼容补丁放在自己的状态目录。任务启动流程为新 Houdini 进程加载桥接；已有进程未启用桥接时先协调启用，保留场景，不为重新接入而重启应用。Houdini 程序和许可证通过 SideFX 安装器提供，诊断结果应区分安装问题、许可证问题和连接失败。
+先读取当前场景及目标节点，再按授权修改，保留当前 .hip 和无关节点；另存或覆盖按用户指示。节点内部名、参数、连接以现场为准。stdout 是 JSON；检查退出码、外层 `ok`、`result` 中 MCP `isError` 和内嵌业务错误，再读回连接、参数、cook 错误与真实输出。渲染/导出以实际产物验收。
 
-用 `tools list` 获取当前工具，再 `tools inspect <name>` 查看输入 schema。通过 `tools call <name> --args-file <json-file>` 传入 UTF-8 JSON 对象，或用 `--stdin`；`call` 是简写。多步操作可用 `batch <json-file>`，格式 `[{"tool":"名称","args":{}}]`，首次失败即停止。
+在授权范围与预算内持续修复到请求结果及相关检查通过，无需为已授权可逆步骤逐次确认。超时/中断表示结果可能未知，先查应用、节点、文件与已完成项；不重放未知写操作或已成功的批次项。无法运行时保留可用产物与明确阻塞，不能用 JSON 成功文本代替运行证据。
 
-先读取节点网络与场景状态，再修改用户指定的节点。构建或修改网络后检查连接、参数、cook 错误和实际输出；渲染/导出以生成的结果验收。保留当前 .hip 与已有节点，另存或覆盖按用户指示执行。
+## 会话释放
 
-stdout 为 JSON；`ok:false` 或非零退出码表示失败，上游原始内容块保留在 `result`。超时/中断时操作结果可能未知，先查询 Houdini 状态再考虑重试。批次错误包含已完成项，避免重放它们。
+- 规划、修改、渲染、cook、验收和短暂停顿期间保留会话；用 `session status` 看忙闲。默认空闲回收 30 分钟，start 的 `--idle-timeout <seconds>` 可调整；运行中请求不因空闲超时关闭，回收只影响 MCP。
+- 目标已验收且暂时不用 MCP 时，`session end <task-name>` 释放 MCP，默认保留应用和桥接。
+- 仅本任务启动、无未保存内容/后台工作且无需交回用户继续使用的应用，才考虑 `session end <task-name> --close-app`。它核验归属并正常请求关闭，保留原生保存提示；待处理或保留状态如实报告，不强杀或丢弃内容。用户原先打开、其他任务使用、无归属证据及后台模式应用保持打开。
 
-`skills install --target <project>` 给其他项目安装此 skill；Claude 用 `--agent claude`。用户要求停用固定 MCP 时用 `integration disable-codex --dry-run` 查看将改变的条目，然后执行实际迁移。它保存备份，重启 Codex 生效。
+会话失联时先核对应用；显式重建会话不重放已提交操作。
+
+## 缺失环境或连接故障
+
+先 `doctor`；仅环境缺失/损坏时查 `setup --help` 再 `setup`，不为普通任务重装。有定制 MCP 时用 `setup --source <directory>`，依赖与兼容补丁在 CLI 状态目录。Houdini 和许可证由 SideFX 安装器提供；区分安装、许可证与连接失败。
+
+启动流程只为新进程加载桥接；已有应用未启桥接时保留场景并协调启用，不为接入重启应用。桥接保持本地访问，不公开端口。
+
+## 用户要求安装或迁移时
+
+`skills install --target <project>` 安装此单文件技能；Claude 用 `--agent claude`。停用固定 MCP 时先用 `integration disable-codex --dry-run` 查看条目，再执行已授权迁移；它保存备份，重启 Codex 生效。这些操作不属于普通场景任务的前置步骤。

@@ -1,37 +1,38 @@
 ---
 name: houdini-volumes
-description: VDB、SDF、体积转换和字段排错；烟火模拟目标转houdini-pyro。 输出最小可验证方案、必要网络变更和带证据的验收结果。
+description: Houdini VDB、SDF、体积转换和字段排错；烟火模拟目标转houdini-pyro。
 ---
 
 # houdini-volumes
 
-## 激活与依赖
-VDB、SDF、体积转换和字段排错；烟火模拟目标转houdini-pyro。
-必须同目录安装 `houdini-agent`。先遵循 [执行协议](../houdini-agent/wiki/02-cli-contract.md)，不替代原有 `houdini-cli` 的环境和生命周期能力。
+## 按需资料
 
-## 开始前
-确认目标、已有节点路径、Houdini版本、输入数据、输出格式及允许修改范围。只有阻塞安全执行的信息才询问；其余列明假设并从低成本原型开始。
+依赖同目录安装的 `houdini-agent` 知识目录；直接使用本技能，无需先加载总路由。
+只读与问题相关的卡片；已有准确入口时无需再检索。查询或写方案不启动 Houdini。
 
-## 按需知识
 - [按需阅读：Volume / VDB / SDF 数据与运算](../houdini-agent/wiki/08-volumes.md)
 
-## 工作顺序
-1. 用 `houdini-agent/tools/query.py search` 检索当前问题，只读取命中卡片；读取现场工具schema和节点参数。
-2. 检查领域输入：字段名、标量/向量、fog或level set、体素尺寸、transform、active bounds、是否封闭几何。
-3. 写清数据流和修改计划。先看字段类型、名称和空间范围。SDF 符号与窄带用途不同于密度，不能把 density 直接当 surface。
-4. 在用户授权范围或任务命名空间做最小试验，串行调用；不重置全场景，不覆盖无关节点。
-5. 每阶段检查真实数据再继续。可视化切片、iso面与数值范围；不要只靠viewport密度滑块判断数据存在。
-6. 提交证据，记录失败/未验证项，结束会话时默认保留应用。
+## 数据与取舍
 
-## 必须验收
+- 输入契约：字段名、标量/向量、fog或level set、体素尺寸、transform、active bounds、是否封闭几何。
+- 先看字段类型、名称和空间范围。SDF 符号与窄带用途不同于密度，不能把 density 直接当 surface。
+- 可视化切片、iso面与数值范围；不要只靠viewport密度滑块判断数据存在。
+
+## 现场执行
+
+实际操作按 [CLI 契约](../houdini-agent/wiki/02-cli-contract.md) 执行；环境未变时复用已核对的 schema 与节点信息。保留无关现场，在授权命名空间内串行修改、读回并修复到结果通过；超时未知操作先查状态，不重放。
+
+## 执行任务完成条件
+
 - 正确字段、类型、transform及active bounds。
 - 目标厚度与关键形状在选择的体素尺寸下可表达。
 - 渲染路径能读回导出的 VDB 字段。
 
-## 失败与降级
+## 定位失败
+
 - SDF 合并出现裂缝：检查level set窄带和transform，不简单叠加。
 - 体积突然吃满内存：检查是否激活了大范围背景/转dense，先缩小域再恢复。
-工具缺失时先确认 schema；专用能力不存在才考虑经检查的 HOM。`guide` 或 `discovery` 文档均不代表现场已经通过运行验收。超时先查状态，不重复提交未知写操作。
 
-## 交付
-输出：目标与假设、实际版本、网络/参数改动、缓存/渲染/导出路径、技术与视觉验收证据、未验证项及下一步检查。不得用本地Python语法测试冒充Houdini运行测试。
+## 返回结果
+
+交付所请求的结论、代码或产物；现场操作附改动、路径与证据。标明技术、时间、视觉未验证项，离线检查不代表 Houdini 运行通过；受阻时保留产物和具体阻塞。

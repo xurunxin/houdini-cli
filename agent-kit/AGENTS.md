@@ -1,18 +1,11 @@
-# Agent instructions for maintaining this kit
+# Maintaining the Houdini agent kit
 
-Use `skills/houdini-agent/SKILL.md` as the execution router. Knowledge lives in the self-contained hub, not in external absolute paths.
+Open files relevant to the change. Use `skills/houdini-agent/SKILL.md` for unclear or cross-domain tasks; start a known specialty directly. Documentation work does not launch Houdini.
 
-Do not modify the upstream houdini-cli implementation or its existing skill merely to install this pack. It is an additive package. Do not start Houdini for documentation-only tasks.
+Keep knowledge self-contained in `skills/houdini-agent`, links relative and installation recursive. Installing this kit does not require changing the CLI.
 
-Knowledge records in `index/topics.json` and `index/recipes.json` must stay synchronized with their Wiki pages. Use `tools/rebuild_wiki.py` and `tools/build_site.py` after editing records, then run the validator/tests. Source records must identify exact links, review depth, date, and runtime validation scope. A rolling URL with a null content hash is NOT a pinned document snapshot.
+For knowledge edits, update `skills/houdini-agent/index/topics.json` or `recipes.json`, then run `python tools/rebuild_wiki.py`. Changed embedded documents require `python tools/build_site.py`; refresh `MANIFEST.sha256` last. Consult `CONTRIBUTING.md` for source or packaging changes.
 
-Test commands (from this directory):
+From this directory, `python tools/validate_kit.py .` checks structure/links; `python -m unittest discover -s tests -v` uses offline fixtures, no production or `hou`. Run relevant checks and fix caused failures without reconfirming authorized reversible work; finish with evidence or a concrete blocker.
 
-```bash
-python tools/validate_kit.py .
-python -m unittest discover -s tests -v
-```
-
-No `hou` runtime is assumed in the ordinary test suite. Static Python tests do not validate Houdini operators, VEX compilation, simulation results or renders. Never mark runtime-tested without a target build, procedure and evidence.
-
-Preserve unknown user files, reject path escapes, keep CLI calls serial, and do not replay timed-out mutations. New effects start as design recipes; promote only after reproducible target-Houdini evidence exists.
+Preserve unknown files and path-escape protections. Bridge calls stay serial; never replay unknown timed-out mutations. Source records need exact links, review depth, date and runtime scope; null hashes do not pin rolling URLs. Recipes remain design-only until target-build evidence exists. Offline tests do not validate Houdini operators, VEX, simulations or renders.
