@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "entry_loaded",
+      "pass": true
+    },
+    {
+      "name": "desktop_no_horizontal_overflow",
+      "pass": true
+    },
+    {
+      "name": "chinese_query_top_hit",
+      "pass": true,
+      "observed": "诊断布料穿透而不盲目增大刚度\n任务配方"
+    },
+    {
+      "name": "recipe_navigation",
+      "pass": true
+    },
+    {
+      "name": "relative_wiki_link",
+      "pass": true
+    },
+    {
+      "name": "skill_filter_count",
+      "pass": true
+    },
+    {
+      "name": "no_match_state",
+      "pass": true
+    },
+    {
+      "name": "usd_query_has_binding",
+      "pass": true
+    },
+    {
+      "name": "mobile_no_horizontal_overflow",
+      "pass": true
+    },
+    {
+      "name": "no_external_requests",
+      "pass": true
+    },
+    {
+      "name": "no_javascript_errors",
+      "pass": true,
+      "errors": []
+    }
+  ],
+  "scope": "System Chromium with embedded HTML via set_content; file URL navigation restricted by environment. No Houdini testing.",
+  "network_requests": []
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "task": "replace-with-task-id",
+  "goal": "填写用户目标",
+  "assumptions": [],
+  "versions": {
+    "houdini": null,
+    "cli": null,
+    "upstream_commit": null
+  },
+  "scene_before": {
+    "hip_path": null,
+    "unsaved_state": "unknown"
+  },
+  "authorization": {
+    "allowed_node_roots": [],
+    "allowed_output_roots": [],
+    "allow_write": false,
+    "allow_cook": false,
+    "allow_render": false,
+    "allow_overwrite": false
+  },
+  "input_contracts": [],
+  "output_contracts": [],
+  "frame_range": {
+    "start": null,
+    "end": null,
+    "fps": null
+  },
+  "budget": {
+    "max_wall_seconds": null,
+    "max_memory_gb": null,
+    "max_disk_gb": null
+  },
+  "read_pages": [],
+  "live_tool_schema_files": [],
+  "planned_steps": [],
+  "submitted_requests": [],
+  "completed_steps": [],
+  "outcome_unknown_steps": [],
+  "recovery_policy": "inspect scene/output state first; never auto-replay unknown mutations"
+}

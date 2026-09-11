@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "task": "replace-with-task-id",
+  "versions": {
+    "houdini": null,
+    "cli": null
+  },
+  "checks": [
+    {
+      "layer": "technical",
+      "criterion": "输出数据/帧清单/读回满足约定",
+      "status": "unknown",
+      "evidence": [],
+      "reason": "未执行"
+    },
+    {
+      "layer": "temporal",
+      "criterion": "连续帧或关键事件窗口的运动、碰撞与采样通过",
+      "status": "unknown",
+      "evidence": [],
+      "reason": "未检查回放"
+    },
+    {
+      "layer": "visual",
+      "criterion": "构图、形态、材质、光照与brief一致",
+      "status": "unknown",
+      "evidence": [],
+      "reason": "未查看实际输出"
+    }
+  ],
+  "limitations": [
+    "清单结构通过不等于事实/艺术判断通过"
+  ],
+  "changes": [],
+  "output_manifest": [],
+  "session_end_decision": "retain-app"
+}

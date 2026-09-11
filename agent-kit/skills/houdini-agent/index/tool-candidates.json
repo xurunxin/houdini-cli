@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "upstream_commit": "de4fd93acc207fc57c02b330d421461f5963a945",
+  "is_live_schema": false,
+  "tools": [
+    {
+      "name": "get_scene_info",
+      "risk": "scene-inspection",
+      "signature_summary": "按实时schema",
+      "caution": "读取场景概要；当前代码仓库的只读smoke候选。"
+    },
+    {
+      "name": "get_parameter_schema",
+      "risk": "inspection-with-evaluation",
+      "signature_summary": "path; pattern?; offset?; limit?",
+      "caution": "读取真实节点参数；可能执行参数求值/菜单相关逻辑，限定范围。"
+    },
+    {
+      "name": "get_geometry_info",
+      "risk": "may-cook",
+      "signature_summary": "path",
+      "caution": "点/面/属性/包围盒概要；可能cook。"
+    },
+    {
+      "name": "get_geometry_data",
+      "risk": "may-cook",
+      "signature_summary": "path; element?; attributes?; start?; limit?",
+      "caution": "分页值读取；固定上游limit有上限，仍以现场schema为准。"
+    },
+    {
+      "name": "find_error_nodes",
+      "risk": "last-cook-inspection",
+      "signature_summary": "root_path?; include_warnings?",
+      "caution": "读取上次cook错误，不强制cook；没有错误不证明数据新鲜。"
+    },
+    {
+      "name": "connect_nodes",
+      "risk": "scene-write",
+      "signature_summary": "from_path; to_path; input_index?; output_index?",
+      "caution": "两个节点同网络；0-based端口，检查实际输入语义。"
+    },
+    {
+      "name": "disconnect_node_input",
+      "risk": "scene-write",
+      "signature_summary": "path; input_index?",
+      "caution": "断开输入，可能改变下游结果。"
+    },
+    {
+      "name": "set_parameters",
+      "risk": "scene-write",
+      "signature_summary": "path; parameters(object)",
+      "caution": "检查result.failed；状态success仍可能部分失败。"
+    },
+    {
+      "name": "set_node_flags",
+      "risk": "scene-write",
+      "signature_summary": "path; display?; render?; bypass?; template?",
+      "caution": "仅设置明确传入项，检查unsupported。"
+    },
+    {
+      "name": "layout_network",
+      "risk": "scene-write-ui",
+      "signature_summary": "path",
+      "caution": "移动指定网络所有子节点，不能擅自重排无关用户网络。"
+    },
+    {
+      "name": "cook_node",
+      "risk": "may-expensive-cook",
+      "signature_summary": "path",
+      "caution": "force cook，可能很贵或推进上游状态。"
+    },
+    {
+      "name": "create_wrangle",
+      "risk": "scene-write-and-cook",
+      "signature_summary": "parent_path; vex_code; name?; run_over?; input_node?",
+      "caution": "创建并立即验证Wrangle，检查validation，不只看创建成功。"
+    },
+    {
+      "name": "set_wrangle_code",
+      "risk": "scene-write-and-cook",
+      "signature_summary": "path; vex_code; validate?",
+      "caution": "替换现有代码；默认重新cook，先保存旧代码/意图。"
+    },
+    {
+      "name": "delete_node",
+      "risk": "destructive",
+      "signature_summary": "path",
+      "caution": "本包不自动调用；需要明确目标、权限及可恢复计划。"
+    },
+    {
+      "name": "execute_houdini_code",
+      "risk": "arbitrary-python",
+      "signature_summary": "code",
+      "caution": "后备能力。固定上游把stdout包在文本里；需解析业务结果标记。"
+    },
+    {
+      "name": "render_single_view",
+      "risk": "scene-and-file-side-effects",
+      "signature_summary": "orthographic?; rotation?; render_path?; render_engine?; karma_engine?",
+      "caution": "固定上游提供此工具，但不能把自动取景当成批准相机的正式渲染；执行前审查实现与输出。"
+    }
+  ]
+}

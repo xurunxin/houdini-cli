@@ -1,0 +1,10 @@
+// Point Wrangle. Required: point vector rest captured upstream BEFORE deformation, point N.
+// Stateless displacement from reference positions; no Solver needed.
+// Source: S-VEX, C-VEX. Fixed amplitude/frequency are local example choices.
+if (haspointattrib(0,"rest") && haspointattrib(0,"N") && length2(v@N) > 1e-12) {
+    float h = snoise(v@rest * 2.5);
+    @P = v@rest + normalize(v@N) * h * 0.03;
+    i@agent_missing_reference = 0;
+} else {
+    i@agent_missing_reference = 1;
+}

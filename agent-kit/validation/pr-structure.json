@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "errors": [],
+  "counts": {
+    "topics": 32,
+    "recipes": 40,
+    "skills": 20,
+    "sources": 81,
+    "markdown_files": 104,
+    "json_files": 20,
+    "python_files": 18,
+    "checked_local_links": 312
+  },
+  "scope": "offline structure / local links / index consistency / Python AST; external link liveness and Houdini semantics NOT tested"
+}

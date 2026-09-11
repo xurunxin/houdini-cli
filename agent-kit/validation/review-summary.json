@@ -1,0 +1,46 @@
+{
+  "date": "2026-09-11",
+  "reviewed_pr": "https://github.com/xurunxin/houdini-cli/pull/1",
+  "initial_head": "8f71a7f25be18d02ea800ebd2839cfe3f19db0c1",
+  "base": "57a8e81de4a8f372f6dda4de6ab2fffee11e4bb9",
+  "python": {
+    "windows": {
+      "command": "python -m unittest discover -s agent-kit/tests -v",
+      "exit_code": 0,
+      "tests": 77
+    },
+    "linux": {
+      "command": "python -m unittest discover -s agent-kit/tests -v",
+      "exit_code": 0,
+      "tests": 77
+    }
+  },
+  "cli": {
+    "windows": {
+      "node": "24.20.0",
+      "tests": 30,
+      "pass": 30,
+      "fail": 0
+    },
+    "linux": {
+      "node": "22.23.2",
+      "tests": 30,
+      "pass": 30,
+      "fail": 0,
+      "environment": "Docker node:22-bookworm-slim; source copy; npm ci --ignore-scripts"
+    },
+    "check": "passed on both platforms",
+    "npm_pack_dry_run": "passed; 20 entries"
+  },
+  "browser": {
+    "checks": 11,
+    "browser": "Chrome/152.0.7977.83",
+    "file_url": true,
+    "screenshots_visually_reviewed": true
+  },
+  "initial_observations": [
+    "Windows query pipe could not decode Chinese as UTF-8",
+    "Existing Windows session initialization test timed out in an initial full run; unchanged main and PR isolated runs and final full run passed"
+  ],
+  "houdini_runtime_tested": false
+}

@@ -8,6 +8,9 @@ import test from 'node:test';
 
 import { doctor, launch, metadata, server, setup } from '../src/app.mjs';
 
+const houdiniExecutable = process.platform === 'win32' ? 'houdini.exe' : 'houdini';
+const hythonExecutable = process.platform === 'win32' ? 'hython.exe' : 'hython';
+
 function temporaryDirectory(t) {
   const directory = mkdtempSync(join(tmpdir(), 'houdini-cli-test-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
@@ -80,13 +83,13 @@ test('setup discovers the numerically newest Houdini installation', async (t) =>
   process.env.ProgramFiles = root;
   process.env['ProgramFiles(x86)'] = '';
   for (const version of ['21.5.999', '22.0.9', '22.0.10']) {
-    const executable = join(root, 'Side Effects Software', `Houdini ${version}`, 'bin', 'houdini.exe');
+    const executable = join(root, 'Side Effects Software', `Houdini ${version}`, 'bin', houdiniExecutable);
     mkdirSync(dirname(executable), { recursive: true });
     writeFileSync(executable, '', 'utf8');
   }
 
   const result = await setup({ stateDir: join(root, 'state') }, { dryRun: true, execFileSync: fakeExec([]) });
-  assert.equal(result.config.appPath, join(root, 'Side Effects Software', 'Houdini 22.0.10', 'bin', 'houdini.exe'));
+  assert.equal(result.config.appPath, join(root, 'Side Effects Software', 'Houdini 22.0.10', 'bin', houdiniExecutable));
 });
 
 test('setup keeps external source unchanged and patches only the generated bridge', async (t) => {
@@ -134,7 +137,7 @@ test('launch dry-run adds a process-scoped Houdini path and never edits preferen
   const appPath = join(bin, 'houdini.exe');
   mkdirSync(dirname(appPath), { recursive: true });
   writeFileSync(appPath, '', 'utf8');
-  writeFileSync(join(bin, 'hython.exe'), '', 'utf8');
+  writeFileSync(join(bin, hythonExecutable), '', 'utf8');
   const configured = await setup(
     { stateDir: join(root, 'state'), source, appPath, uvPath: 'uv' },
     { execFileSync: fakeExec([]) },
@@ -149,7 +152,7 @@ test('launch dry-run adds a process-scoped Houdini path and never edits preferen
   assert.ok(gui.env.HOUDINI_PATH.endsWith('&'));
 
   const headless = await launch(configured.config, { dryRun: true, headless: true });
-  assert.equal(headless.command, join(bin, 'hython.exe'));
+  assert.equal(headless.command, join(bin, hythonExecutable));
   assert.deepEqual(headless.args, [join(configured.config.pluginPath, 'headless_runner.py')]);
   const runner = readFileSync(headless.args[0], 'utf8');
   assert.ok(runner.indexOf('QCoreApplication.instance()') < runner.indexOf('existing_module.stop_server()'));
@@ -163,7 +166,7 @@ test('doctor reports an installed runtime without mutating it', async (t) => {
   const appPath = join(bin, 'houdini.exe');
   mkdirSync(bin, { recursive: true });
   writeFileSync(appPath, '', 'utf8');
-  writeFileSync(join(bin, 'hython.exe'), '', 'utf8');
+  writeFileSync(join(bin, hythonExecutable), '', 'utf8');
   const configured = await setup(
     { stateDir: join(root, 'state'), source, appPath, uvPath: 'uv' },
     { execFileSync: fakeExec([]) },

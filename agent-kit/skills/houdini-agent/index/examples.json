@@ -1,0 +1,88 @@
+{
+  "examples": [
+    {
+      "path": "examples/hom/runtime_probe.py",
+      "language": "python-hom",
+      "validation": "syntax-only-plus-offline-testable-guards",
+      "runtime_tested": false,
+      "risk": "inspection-no-explicit-cook"
+    },
+    {
+      "path": "examples/hom/discover_node_types.py",
+      "language": "python-hom",
+      "validation": "syntax-only-plus-offline-testable-guards",
+      "runtime_tested": false,
+      "risk": "inspection-no-explicit-cook"
+    },
+    {
+      "path": "examples/hom/inspect_node.py",
+      "language": "python-hom",
+      "validation": "syntax-only-plus-offline-testable-guards",
+      "runtime_tested": false,
+      "risk": "inspection-no-explicit-cook"
+    },
+    {
+      "path": "examples/hom/geometry_report.py",
+      "language": "python-hom",
+      "validation": "syntax-only-plus-offline-testable-guards",
+      "runtime_tested": false,
+      "risk": "explicit-cook"
+    },
+    {
+      "path": "examples/hom/build_sop_smoke.py",
+      "language": "python-hom",
+      "validation": "syntax-only-plus-offline-testable-guards",
+      "runtime_tested": false,
+      "risk": "write-and-cook"
+    },
+    {
+      "path": "examples/hom/usd_report.py",
+      "language": "python-hom",
+      "validation": "syntax-only-plus-offline-testable-guards",
+      "runtime_tested": false,
+      "risk": "explicit-cook"
+    },
+    {
+      "path": "examples/vex/stable_scale.vfl",
+      "language": "vex-snippet",
+      "validation": "manual-review-only",
+      "runtime_tested": false,
+      "risk": "geometry-modification"
+    },
+    {
+      "path": "examples/vex/orient_from_normal.vfl",
+      "language": "vex-snippet",
+      "validation": "manual-review-only",
+      "runtime_tested": false,
+      "risk": "geometry-modification"
+    },
+    {
+      "path": "examples/vex/rest_displacement.vfl",
+      "language": "vex-snippet",
+      "validation": "manual-review-only",
+      "runtime_tested": false,
+      "risk": "geometry-modification"
+    },
+    {
+      "path": "examples/vex/sample_surface_color.vfl",
+      "language": "vex-snippet",
+      "validation": "manual-review-only",
+      "runtime_tested": false,
+      "risk": "geometry-modification"
+    },
+    {
+      "path": "examples/vex/curl_velocity.vfl",
+      "language": "vex-snippet",
+      "validation": "manual-review-only",
+      "runtime_tested": false,
+      "risk": "geometry-modification"
+    },
+    {
+      "path": "examples/vex/growth_accumulation.vfl",
+      "language": "vex-snippet",
+      "validation": "manual-review-only",
+      "runtime_tested": false,
+      "risk": "geometry-modification"
+    }
+  ]
+}

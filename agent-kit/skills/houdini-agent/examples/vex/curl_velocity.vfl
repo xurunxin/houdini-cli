@@ -1,0 +1,5 @@
+// SOP Point Wrangle. Produces a velocity ATTRIBUTE; does not itself integrate motion.
+// Required: point P; stable reference/rest input recommended for a persistent field.
+// Source: S-CURL. POP velocity update semantics must be evaluated separately.
+vector field_position = @P * 1.2 + set(0.0,@Time * 0.3,0.0);
+v@v = curlnoise(field_position) * 0.5;

@@ -1,0 +1,2514 @@
+{
+  "schema_version": 1,
+  "recipes": [
+    {
+      "id": "recipe-sop-smoke",
+      "title": "在独立任务空间验证创建、连线与 cook",
+      "topic": "runtime-discovery",
+      "skill": "houdini-agent",
+      "contexts": [
+        "HOM"
+      ],
+      "aliases": [
+        "最小场景",
+        "smoke",
+        "测试建模"
+      ],
+      "node_candidates": [
+        "Box",
+        "Transform",
+        "Null OUT"
+      ],
+      "goal": "在独立任务空间验证创建、连线与 cook",
+      "inputs": "目标 node path 或父网络 path，效果关键词，节点类型候选；不要把界面标签当作内部名称。",
+      "minimum_network": "Box → Transform → Null OUT",
+      "parameters_to_discover": [
+        "box尺寸tuple",
+        "transform平移tuple",
+        "节点类型全名"
+      ],
+      "steps": [
+        "先read-only probe与工具schema确认连接，取得用户对小样例修改与cook许可。",
+        "将build-sop-smoke配置的allow_write和allow_cook设true，保持任务名唯一。",
+        "封装脚本后调用一次；若超时或同名空间存在，改为查询，不重复创建。"
+      ],
+      "acceptance": [
+        "OUT包围盒与尺寸/平移计算结果一致。",
+        "无清空场景、删除、保存或渲染；输出节点留给用户检查。"
+      ],
+      "troubleshooting": [
+        [
+          "显示标签对但 parm 为 None",
+          "查实际内部 name，不猜 snake_case。"
+        ],
+        [
+          "createNode 自动变成别的版本",
+          "检查 namespace precedence 和 exact_type_name；显式选择后再确认 type。"
+        ],
+        [
+          "HOM 方法缺失",
+          "查当前版本及 Node/OpNode/SopNode/LopNode 区分，不照搬别的上下文对象。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-NODE",
+        "S-OPNODE",
+        "S-NODETYPE",
+        "S-PARM",
+        "C-PYTHON",
+        "S-BOX",
+        "S-XFORM"
+      ],
+      "example": "examples/hom/build_sop_smoke.py",
+      "path": "wiki/recipes/sop-smoke.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-parameter-failure",
+      "title": "节点参数设置部分失败后的恢复",
+      "topic": "cli-contract",
+      "skill": "houdini-agent",
+      "contexts": [
+        "CLI",
+        "HOM"
+      ],
+      "aliases": [
+        "set_parameters failed",
+        "参数部分失败",
+        "菜单token"
+      ],
+      "node_candidates": [
+        "get_parameter_schema",
+        "set_parameters",
+        "read back"
+      ],
+      "goal": "节点参数设置部分失败后的恢复",
+      "inputs": "任务名、已存在会话、当前场景与未保存状态；当前工具列表及输入 schema；输出白名单目录。",
+      "minimum_network": "get_parameter_schema → set_parameters → read back",
+      "parameters_to_discover": [
+        "内部参数名",
+        "类型与tuple",
+        "菜单token",
+        "failed清单"
+      ],
+      "steps": [
+        "先读取当前参数schema与已设值。",
+        "只提交存在、类型匹配的参数；记录返回result.failed，不因status=success忽略。",
+        "已成功项不重放，修正失败项后再次读回，并进行领域验收。"
+      ],
+      "acceptance": [
+        "failed清单为空或逐项说明未执行原因。",
+        "成功参数读回一致，所需效果检查通过。"
+      ],
+      "troubleshooting": [
+        [
+          "一调用就掉线",
+          "排查第二个 MCP 客户端；单桥接最新连接会替换旧连接，多个 home 不等于隔离应用。"
+        ],
+        [
+          "已有应用无法连接",
+          "CLI 不会向已有未启桥接的进程注入；保留现场并协调启用。"
+        ],
+        [
+          "工具超时",
+          "请求结果未知，不代表 Houdini 已停止；延长 CLI 超时也不保证上游无独立超时。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "R-README",
+        "R-CLI",
+        "R-SKILL",
+        "R-SETUP",
+        "R-VALID",
+        "R-INSTALL",
+        "R-TOOLS"
+      ],
+      "example": null,
+      "path": "wiki/recipes/parameter-failure.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-tube",
+      "title": "沿曲线生成稳定的管线或线缆",
+      "topic": "modeling",
+      "skill": "houdini-sop",
+      "contexts": [
+        "SOP"
+      ],
+      "aliases": [
+        "线缆",
+        "管道",
+        "扫掠扭转"
+      ],
+      "node_candidates": [
+        "Curve",
+        "Resample",
+        "frame/orientation",
+        "Sweep",
+        "OUT"
+      ],
+      "goal": "沿曲线生成稳定的管线或线缆",
+      "inputs": "尺寸/单位、轮廓、曲线方向、封闭要求、法线/UV、目标面数、是否需要后续变形或体积碰撞。",
+      "minimum_network": "Curve → Resample → frame/orientation → Sweep → OUT",
+      "parameters_to_discover": [
+        "采样间距",
+        "曲线方向",
+        "截面/半径",
+        "朝向frame",
+        "端盖"
+      ],
+      "steps": [
+        "用简单折线建立尺度，查看采样密度是否跟曲率匹配。",
+        "先显示局部轴，解决相邻frame突变，再扫掠非圆截面。",
+        "增加倒角/UV等细节前检查急弯、端盖和最小半径。"
+      ],
+      "acceptance": [
+        "非圆截面不意外翻转；端点和急弯不严重自交。",
+        "修改路径后输出仍可用，参数边界可解释。"
+      ],
+      "troubleshooting": [
+        [
+          "Sweep 扭转",
+          "先检查曲线顺序、局部 frame 与接近共线的 up，不盲目增加面数。"
+        ],
+        [
+          "Boolean 崩坏",
+          "检查共面/退化/微小比例差，尝试预清理或替代表示。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-MODEL",
+        "S-BOX",
+        "S-XFORM",
+        "C-ATTR"
+      ],
+      "example": null,
+      "path": "wiki/recipes/tube.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-scatter",
+      "title": "在表面散布具有稳定方向和大小的实例",
+      "topic": "instancing",
+      "skill": "houdini-sop",
+      "contexts": [
+        "SOP",
+        "LOP"
+      ],
+      "aliases": [
+        "散布树木",
+        "朝向",
+        "实例阵列",
+        "copy"
+      ],
+      "node_candidates": [
+        "Surface",
+        "Scatter",
+        "id/pscale/orient",
+        "Copy to Points",
+        "OUT"
+      ],
+      "goal": "在表面散布具有稳定方向和大小的实例",
+      "inputs": "原型的前向轴/原点、目标点位置、稳定 id、N/up 或 orient、缩放策略、原型选择字段。",
+      "minimum_network": "Surface → Scatter → id/pscale/orient → Copy to Points → OUT",
+      "parameters_to_discover": [
+        "密度",
+        "seed",
+        "原型轴",
+        "实例属性优先级",
+        "packed策略"
+      ],
+      "steps": [
+        "选带方向标记的原型并确定前向轴。",
+        "建立稳定id再生成随机尺度；表面法线不足以定义全部roll时补up/frame。",
+        "先十个实例验证，再扩展到目标密度和渲染表示。"
+      ],
+      "acceptance": [
+        "原型方向、尺寸和分布符合目标。",
+        "改变帧或重cook不引入无意义随机闪烁。"
+      ],
+      "troubleshooting": [
+        [
+          "所有物体同向",
+          "检查目标点上的 orient 类型是否四元数、写到了哪一层。"
+        ],
+        [
+          "复制到点后变形",
+          "检查 transform 与 pscale/scale 的组合和源对象变换。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-COPY",
+        "C-CHEAT",
+        "J-ATTR"
+      ],
+      "example": "examples/vex/stable_scale.vfl",
+      "path": "wiki/recipes/scatter.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-surface-sample",
+      "title": "把参考曲面的颜色传给目标点",
+      "topic": "vex",
+      "skill": "houdini-vex",
+      "contexts": [
+        "SOP",
+        "VEX",
+        "VOP"
+      ],
+      "aliases": [
+        "曲面采样",
+        "xyzdist",
+        "primuv",
+        "颜色转移"
+      ],
+      "node_candidates": [
+        "Target points + Reference polygons",
+        "Point Wrangle",
+        "OUT"
+      ],
+      "goal": "把参考曲面的颜色传给目标点",
+      "inputs": "Run Over、输入编号、每个输入的属性与坐标空间、必要的 spare parameters、是否有时间反馈。",
+      "minimum_network": "Target points + Reference polygons → Point Wrangle → OUT",
+      "parameters_to_discover": [
+        "输入0/1",
+        "参考Cd归属",
+        "空间一致性",
+        "距离阈值"
+      ],
+      "steps": [
+        "把目标点和参考面放在相同坐标空间，确认参考Cd是point vector。",
+        "使用xyzdist获得primitive索引与局部UVW，再用primuv插值。",
+        "记录采样距离并检查过远点；primitive UV不是贴图UV。"
+      ],
+      "acceptance": [
+        "参考空输入被识别，未把默认零值当成功。",
+        "抽样目标颜色与曲面插值相符，远离参考的数据按策略处理。"
+      ],
+      "troubleshooting": [
+        [
+          "代码不报错但没效果",
+          "确认 Run Over、group、输入编号、缺属性和通道。"
+        ],
+        [
+          "某几帧 NaN",
+          "检查除零、normalize零向量、非法根号和溢出。"
+        ],
+        [
+          "每次 cook 都继续形变",
+          "在不需要累积的地方误用反馈或修改后的 P；改读 rest。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-VEX",
+        "C-VEX",
+        "C-CHEAT",
+        "C-JOY",
+        "J-VEX",
+        "S-XYZDIST",
+        "S-PRIMUV"
+      ],
+      "example": "examples/vex/sample_surface_color.vfl",
+      "path": "wiki/recipes/surface-sample.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-rest-noise",
+      "title": "可重复的 rest 空间噪声形变",
+      "topic": "vex",
+      "skill": "houdini-vex",
+      "contexts": [
+        "SOP",
+        "VEX",
+        "VOP"
+      ],
+      "aliases": [
+        "形变累积",
+        "噪声动画",
+        "rest"
+      ],
+      "node_candidates": [
+        "Rest capture",
+        "Point Wrangle",
+        "Normal",
+        "OUT"
+      ],
+      "goal": "可重复的 rest 空间噪声形变",
+      "inputs": "Run Over、输入编号、每个输入的属性与坐标空间、必要的 spare parameters、是否有时间反馈。",
+      "minimum_network": "Rest capture → Point Wrangle → Normal → OUT",
+      "parameters_to_discover": [
+        "rest属性",
+        "幅度/频率",
+        "法线",
+        "时间依赖"
+      ],
+      "steps": [
+        "在任何变形前创建稳定rest，不在变形后反复覆盖。",
+        "基于rest计算输出P；纯时间函数动画不使用反馈。",
+        "对同一帧重复cook确认不继续增长位移。"
+      ],
+      "acceptance": [
+        "同帧同输入结果稳定。",
+        "幅度、尺度和边界条件没有产生NaN/退化。"
+      ],
+      "troubleshooting": [
+        [
+          "代码不报错但没效果",
+          "确认 Run Over、group、输入编号、缺属性和通道。"
+        ],
+        [
+          "某几帧 NaN",
+          "检查除零、normalize零向量、非法根号和溢出。"
+        ],
+        [
+          "每次 cook 都继续形变",
+          "在不需要累积的地方误用反馈或修改后的 P；改读 rest。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-VEX",
+        "C-VEX",
+        "C-CHEAT",
+        "C-JOY",
+        "J-VEX"
+      ],
+      "example": "examples/vex/rest_displacement.vfl",
+      "path": "wiki/recipes/rest-noise.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-sdf-shell",
+      "title": "用 SDF 合成壳体或融合形状",
+      "topic": "volumes",
+      "skill": "houdini-volumes",
+      "contexts": [
+        "SOP",
+        "VEX"
+      ],
+      "aliases": [
+        "融合壳体",
+        "体积布尔",
+        "sdf合并"
+      ],
+      "node_candidates": [
+        "Clean closed meshes",
+        "VDB from Polygons",
+        "VDB align/combine",
+        "Convert VDB"
+      ],
+      "goal": "用 SDF 合成壳体或融合形状",
+      "inputs": "字段名、标量/向量、fog或level set、体素尺寸、transform、active bounds、是否封闭几何。",
+      "minimum_network": "Clean closed meshes → VDB from Polygons → VDB align/combine → Convert VDB",
+      "parameters_to_discover": [
+        "level set类型",
+        "体素尺寸",
+        "窄带",
+        "transform",
+        "iso阈值"
+      ],
+      "steps": [
+        "先验证输入封闭性和最薄特征是否可由体素表达。",
+        "SDF在统一空间与网格条件下组合，必要时重采样。",
+        "转换回网格后检查边缘、体积损失和面数，再决定重拓扑。"
+      ],
+      "acceptance": [
+        "字段语义未被混成fog，包围盒与目标吻合。",
+        "薄部件未无意消失，网格可用于下游。"
+      ],
+      "troubleshooting": [
+        [
+          "SDF 合并出现裂缝",
+          "检查level set窄带和transform，不简单叠加。"
+        ],
+        [
+          "体积突然吃满内存",
+          "检查是否激活了大范围背景/转dense，先缩小域再恢复。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "C-VOLUME",
+        "S-PYROLOOK",
+        "S-GEO"
+      ],
+      "example": null,
+      "path": "wiki/recipes/sdf-shell.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-point-advection",
+      "title": "构造可检查的 curl 速度场",
+      "topic": "particles",
+      "skill": "houdini-particles",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "curl",
+        "粒子能量流",
+        "速度场"
+      ],
+      "node_candidates": [
+        "Points",
+        "SOP velocity field",
+        "POP/appropriate advection",
+        "Cache"
+      ],
+      "goal": "构造可检查的 curl 速度场",
+      "inputs": "发射位置/面、发射速率、初速度、id、age/life、碰撞对象、帧范围。",
+      "minimum_network": "Points → SOP velocity field → POP/appropriate advection → Cache",
+      "parameters_to_discover": [
+        "场频率",
+        "幅值",
+        "每秒单位",
+        "积分步骤",
+        "边界"
+      ],
+      "steps": [
+        "先只生成v属性并可视化向量，区别静态数据与真正运动。",
+        "在适合的求解器中按时间步推进，不同时重复写位置和积分速度。",
+        "用小点数检查涡旋尺度和边界，再添加渲染尺度与颜色。"
+      ],
+      "acceptance": [
+        "速度场方向与尺度可视化正常。",
+        "连续轨迹无明显跳变，发射/死亡策略清晰。"
+      ],
+      "troubleshooting": [
+        [
+          "轨迹交叉乱连",
+          "核对id稳定性和按id连接设置。"
+        ],
+        [
+          "粒子变快不受控",
+          "检查速度是否每帧累加、重复力节点和时间步。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-POP",
+        "C-SOLVER",
+        "J-ATTR",
+        "S-CURL"
+      ],
+      "example": "examples/vex/curl_velocity.vfl",
+      "path": "wiki/recipes/point-advection.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-particle-trail",
+      "title": "按稳定 id 生成粒子轨迹",
+      "topic": "particles",
+      "skill": "houdini-particles",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "粒子轨迹乱连",
+        "trail",
+        "轨迹"
+      ],
+      "node_candidates": [
+        "POP with stable id",
+        "Cache",
+        "Trail/connect by id",
+        "Sweep"
+      ],
+      "goal": "按稳定 id 生成粒子轨迹",
+      "inputs": "发射位置/面、发射速率、初速度、id、age/life、碰撞对象、帧范围。",
+      "minimum_network": "POP with stable id → Cache → Trail/connect by id → Sweep",
+      "parameters_to_discover": [
+        "id",
+        "长度窗口",
+        "采样步长",
+        "曲线连接方式"
+      ],
+      "steps": [
+        "先验证出生/死亡期间id不重用或冲突。",
+        "缓存必要id和P，再按id重建对应轨迹；不要按ptnum连线。",
+        "轨迹网格化与模拟分离，用同一缓存比较宽度/采样。"
+      ],
+      "acceptance": [
+        "新旧粒子不会被错误连成一条曲线。",
+        "连续播放时轨迹长度与时间窗口一致。"
+      ],
+      "troubleshooting": [
+        [
+          "轨迹交叉乱连",
+          "核对id稳定性和按id连接设置。"
+        ],
+        [
+          "粒子变快不受控",
+          "检查速度是否每帧累加、重复力节点和时间步。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-POP",
+        "C-SOLVER",
+        "J-ATTR"
+      ],
+      "example": null,
+      "path": "wiki/recipes/particle-trail.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-rbd-impact",
+      "title": "刚体碰撞与约束破裂的最小测试",
+      "topic": "rbd",
+      "skill": "houdini-rbd",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "撞击破碎",
+        "刚体爆炸",
+        "约束不破"
+      ],
+      "node_candidates": [
+        "Fracture/name",
+        "Pack/configure",
+        "Constraints + proxy",
+        "RBD Bullet Solver",
+        "Cache"
+      ],
+      "goal": "刚体碰撞与约束破裂的最小测试",
+      "inputs": "带稳定name的碎片、packed几何、碰撞代理、约束几何与属性、驱动/静态物体。",
+      "minimum_network": "Fracture/name → Pack/configure → Constraints + proxy → RBD Bullet Solver → Cache",
+      "parameters_to_discover": [
+        "piece name",
+        "代理类型",
+        "active/animated",
+        "约束类型",
+        "阈值",
+        "子步"
+      ],
+      "steps": [
+        "先无外力运行静止测试，消除初始重叠和约束长度错误。",
+        "只加一个撞击体，检查代理碰撞和大块运动。",
+        "最后调整约束破裂条件；用同一输入时段对比阈值。"
+      ],
+      "acceptance": [
+        "静止状态无初始爆炸。",
+        "破裂时序与冲击一致，渲染碎片可通过name映射回传。"
+      ],
+      "troubleshooting": [
+        [
+          "第一帧炸开",
+          "检查初始重叠、碰撞padding、代理精度、约束长度和尺度。"
+        ],
+        [
+          "碎片全部粘死",
+          "检查约束类型/强度、active和animated驱动。"
+        ],
+        [
+          "高模错位",
+          "查name映射与packed变换，避免重复应用。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-RBD",
+        "S-BULLET"
+      ],
+      "example": null,
+      "path": "wiki/recipes/rbd-impact.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-rbd-transfer",
+      "title": "将代理刚体模拟回传到高模",
+      "topic": "rbd",
+      "skill": "houdini-rbd",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "高模错位",
+        "rbd代理",
+        "piece name"
+      ],
+      "node_candidates": [
+        "High-res pieces + Sim proxy transforms",
+        "Transform transfer",
+        "OUT_RENDER"
+      ],
+      "goal": "将代理刚体模拟回传到高模",
+      "inputs": "带稳定name的碎片、packed几何、碰撞代理、约束几何与属性、驱动/静态物体。",
+      "minimum_network": "High-res pieces + Sim proxy transforms → Transform transfer → OUT_RENDER",
+      "parameters_to_discover": [
+        "piece name",
+        "packed transform",
+        "pivot",
+        "rest匹配"
+      ],
+      "steps": [
+        "统计高模与代理name集合并比较缺失/重复。",
+        "验证一个碎片的rest位置与变换，不重复应用对象层transform。",
+        "扩展全体后检查始帧、冲击帧和结束帧。"
+      ],
+      "acceptance": [
+        "piece映射完整且唯一。",
+        "高模和代理刚性运动一致，无双重变换。"
+      ],
+      "troubleshooting": [
+        [
+          "第一帧炸开",
+          "检查初始重叠、碰撞padding、代理精度、约束长度和尺度。"
+        ],
+        [
+          "碎片全部粘死",
+          "检查约束类型/强度、active和animated驱动。"
+        ],
+        [
+          "高模错位",
+          "查name映射与packed变换，避免重复应用。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-RBD",
+        "S-BULLET"
+      ],
+      "example": null,
+      "path": "wiki/recipes/rbd-transfer.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-cloth-penetration",
+      "title": "诊断布料穿透而不盲目增大刚度",
+      "topic": "vellum",
+      "skill": "houdini-vellum",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "布料穿透",
+        "cloth penetration",
+        "碰撞穿透"
+      ],
+      "node_candidates": [
+        "Cloth mesh + constraints + collision",
+        "Vellum Solver",
+        "Cache"
+      ],
+      "goal": "诊断布料穿透而不盲目增大刚度",
+      "inputs": "模拟几何、约束流、碰撞流；边长分布、厚度、质量、pin与目标动画、预期材料。",
+      "minimum_network": "Cloth mesh + constraints + collision → Vellum Solver → Cache",
+      "parameters_to_discover": [
+        "厚度",
+        "碰撞体",
+        "pin",
+        "子步",
+        "约束迭代",
+        "时间采样"
+      ],
+      "steps": [
+        "查看初始自交、cloth/collision尺度、碰撞体质量和pin目标。",
+        "用最剧烈动作的短帧段测试；先修碰撞几何/采样，再提高时间子步。",
+        "约束迭代针对拉伸收敛单独调；每组改动保存对照缓存。"
+      ],
+      "acceptance": [
+        "报告测试帧段的穿透情况与容忍标准。",
+        "pin不意外脱落，拉伸和运动都符合brief。"
+      ],
+      "troubleshooting": [
+        [
+          "高速碰撞穿透",
+          "先查碰撞厚度/初始重叠/变形采样，再增加子步；不要只提高constraint iterations。"
+        ],
+        [
+          "布无限拉长",
+          "检查约束是否存在、pin目标、刚度和收敛。"
+        ],
+        [
+          "绳子像薄布塌下",
+          "确认使用曲线/拉伸弯曲约束，而非照搬cloth设置。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-VELLUM",
+        "S-VELLUMSOLVER",
+        "S-VELLUMTIPS",
+        "C-VELLUM"
+      ],
+      "example": null,
+      "path": "wiki/recipes/cloth-penetration.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-rope",
+      "title": "绳索/枝条的柔性运动",
+      "topic": "vellum",
+      "skill": "houdini-vellum",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "绳子",
+        "枝条摆动",
+        "hair constraint"
+      ],
+      "node_candidates": [
+        "Curve",
+        "Resample",
+        "Vellum hair/stretch-bend constraints",
+        "Solver"
+      ],
+      "goal": "绳索/枝条的柔性运动",
+      "inputs": "模拟几何、约束流、碰撞流；边长分布、厚度、质量、pin与目标动画、预期材料。",
+      "minimum_network": "Curve → Resample → Vellum hair/stretch-bend constraints → Solver",
+      "parameters_to_discover": [
+        "边长",
+        "质量",
+        "厚度",
+        "stretch/bend",
+        "pin目标"
+      ],
+      "steps": [
+        "保持可控曲线采样，不把曲线作为cloth面处理。",
+        "检查pin和目标变形，再测试低速和高速动作。",
+        "模拟曲线后再Sweep渲染外形，避免高面数参与基础解算。"
+      ],
+      "acceptance": [
+        "约束对应曲线拓扑，固定端位置正确。",
+        "弯曲、伸长和碰撞在连续帧中可接受。"
+      ],
+      "troubleshooting": [
+        [
+          "高速碰撞穿透",
+          "先查碰撞厚度/初始重叠/变形采样，再增加子步；不要只提高constraint iterations。"
+        ],
+        [
+          "布无限拉长",
+          "检查约束是否存在、pin目标、刚度和收敛。"
+        ],
+        [
+          "绳子像薄布塌下",
+          "确认使用曲线/拉伸弯曲约束，而非照搬cloth设置。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-VELLUM",
+        "S-VELLUMSOLVER",
+        "S-VELLUMTIPS",
+        "C-VELLUM"
+      ],
+      "example": null,
+      "path": "wiki/recipes/rope.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-cloth-inflate",
+      "title": "约束驱动的充气或软壳原型",
+      "topic": "vellum",
+      "skill": "houdini-vellum",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "充气",
+        "气球",
+        "软壳"
+      ],
+      "node_candidates": [
+        "Closed input",
+        "Appropriate Vellum constraints",
+        "Animated target",
+        "Solver"
+      ],
+      "goal": "约束驱动的充气或软壳原型",
+      "inputs": "模拟几何、约束流、碰撞流；边长分布、厚度、质量、pin与目标动画、预期材料。",
+      "minimum_network": "Closed input → Appropriate Vellum constraints → Animated target → Solver",
+      "parameters_to_discover": [
+        "封闭性",
+        "压力/体积约束",
+        "碰撞",
+        "质量",
+        "拓扑"
+      ],
+      "steps": [
+        "在当前版本Help中确认所选约束支持的表示及目标参数。",
+        "先静态小压力/目标测试，检查体积保持与固定区域。",
+        "确认行为后动画化目标并检查整个变化区间。"
+      ],
+      "acceptance": [
+        "无意外泄漏/爆炸，约束和输入匹配。",
+        "目标动画对输出的影响可解释。"
+      ],
+      "troubleshooting": [
+        [
+          "高速碰撞穿透",
+          "先查碰撞厚度/初始重叠/变形采样，再增加子步；不要只提高constraint iterations。"
+        ],
+        [
+          "布无限拉长",
+          "检查约束是否存在、pin目标、刚度和收敛。"
+        ],
+        [
+          "绳子像薄布塌下",
+          "确认使用曲线/拉伸弯曲约束，而非照搬cloth设置。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-VELLUM",
+        "S-VELLUMSOLVER",
+        "S-VELLUMTIPS",
+        "C-VELLUM"
+      ],
+      "example": null,
+      "path": "wiki/recipes/cloth-inflate.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-smoke-invisible",
+      "title": "烟雾不可见的分层排查",
+      "topic": "pyro",
+      "skill": "houdini-pyro",
+      "contexts": [
+        "SOP",
+        "DOP",
+        "LOP"
+      ],
+      "aliases": [
+        "烟不显示",
+        "烟雾不可见",
+        "density missing"
+      ],
+      "node_candidates": [
+        "Pyro Source",
+        "Rasterized fields",
+        "Pyro Solver",
+        "Cache",
+        "Material/render"
+      ],
+      "goal": "烟雾不可见的分层排查",
+      "inputs": "源几何与持续时间、字段名/类型、体素尺寸、域/边界、碰撞、散热和外观需求。",
+      "minimum_network": "Pyro Source → Rasterized fields → Pyro Solver → Cache → Material/render",
+      "parameters_to_discover": [
+        "字段名/类型",
+        "active bounds",
+        "源时段",
+        "显示/着色范围"
+      ],
+      "steps": [
+        "逐层查密度/温度/速度字段是否存在、范围是否正确。",
+        "数据缺失时修source/接线/cook；字段存在时才查display和shader。",
+        "用简单灯光材质单帧渲染，不同时更改所有解算参数。"
+      ],
+      "acceptance": [
+        "定位首个缺字段或不可见环节。",
+        "缓存读回和实际渲染均能证明体积存在。"
+      ],
+      "troubleshooting": [
+        [
+          "烟不显示",
+          "逐段查source→rasterize→solver→cache→shader；字段存在后才调显示范围。"
+        ],
+        [
+          "爆炸被方盒切断",
+          "查active区域、边界与source扩展。"
+        ],
+        [
+          "缓存巨大",
+          "先核对字段、域和分辨率，不盲目删除渲染/重定时需要的字段。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-PYRO",
+        "S-PYROSOLVER",
+        "S-PYROLOOK",
+        "C-PYRO"
+      ],
+      "example": null,
+      "path": "wiki/recipes/smoke-invisible.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-pyro-burst",
+      "title": "受控的短时爆发烟火原型",
+      "topic": "pyro",
+      "skill": "houdini-pyro",
+      "contexts": [
+        "SOP",
+        "DOP",
+        "LOP"
+      ],
+      "aliases": [
+        "爆炸",
+        "喷发",
+        "pyro burst"
+      ],
+      "node_candidates": [
+        "Timed source",
+        "Fields",
+        "Sparse Pyro",
+        "Cache",
+        "Volume shading"
+      ],
+      "goal": "受控的短时爆发烟火原型",
+      "inputs": "源几何与持续时间、字段名/类型、体素尺寸、域/边界、碰撞、散热和外观需求。",
+      "minimum_network": "Timed source → Fields → Sparse Pyro → Cache → Volume shading",
+      "parameters_to_discover": [
+        "注入持续时间",
+        "体素",
+        "域边界",
+        "上升/扩散",
+        "扰动"
+      ],
+      "steps": [
+        "先确定源的短时窗口和主运动，不在每帧重复无意注入。",
+        "粗分辨率验证爆发形状与域边界。",
+        "主要轮廓认可后加细节并独立进行发光/密度lookdev。"
+      ],
+      "acceptance": [
+        "源关闭后演变正确，域不裁切关键形状。",
+        "模拟与渲染参数修改可分别追踪。"
+      ],
+      "troubleshooting": [
+        [
+          "烟不显示",
+          "逐段查source→rasterize→solver→cache→shader；字段存在后才调显示范围。"
+        ],
+        [
+          "爆炸被方盒切断",
+          "查active区域、边界与source扩展。"
+        ],
+        [
+          "缓存巨大",
+          "先核对字段、域和分辨率，不盲目删除渲染/重定时需要的字段。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-PYRO",
+        "S-PYROSOLVER",
+        "S-PYROLOOK",
+        "C-PYRO"
+      ],
+      "example": null,
+      "path": "wiki/recipes/pyro-burst.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-flip-leak",
+      "title": "液体漏水或流失的诊断",
+      "topic": "flip",
+      "skill": "houdini-flip",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "漏水",
+        "液体穿透",
+        "水丢失"
+      ],
+      "node_candidates": [
+        "Container/source/collision",
+        "FLIP",
+        "Particle cache",
+        "Surface"
+      ],
+      "goal": "液体漏水或流失的诊断",
+      "inputs": "物理尺度、初始液体/持续源、容器、碰撞、速度、粒子分离度、表面和白水需求。",
+      "minimum_network": "Container/source/collision → FLIP → Particle cache → Surface",
+      "parameters_to_discover": [
+        "碰撞SDF",
+        "壁厚",
+        "边界",
+        "粒子分离度",
+        "时间步",
+        "出口"
+      ],
+      "steps": [
+        "区分设计出口、开域与意外穿透；记录粒子数/体积变化趋势。",
+        "检查碰撞体厚度、封闭性与动态变形采样。",
+        "验证模拟数据后再看meshing，避免把表面洞误判为液体丢失。"
+      ],
+      "acceptance": [
+        "损失原因定位到源/边界/碰撞或网格化。",
+        "短时段连续回放无不可接受漏水。"
+      ],
+      "troubleshooting": [
+        [
+          "液体穿容器",
+          "检查SDF/碰撞精度、壁厚、运动采样与时间步。"
+        ],
+        [
+          "水面抖动",
+          "先区别粒子模拟噪声还是meshing时间不稳定。"
+        ],
+        [
+          "粘性表现失真",
+          "先核对物理尺度和材料设置，不从教程直接复制数值。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-FLIP",
+        "S-FLIPMIN"
+      ],
+      "example": null,
+      "path": "wiki/recipes/flip-leak.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-fluid-surface",
+      "title": "FLIP 粒子到时间稳定表面",
+      "topic": "flip",
+      "skill": "houdini-flip",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "水面闪烁",
+        "粒子网格化",
+        "particle fluid surface"
+      ],
+      "node_candidates": [
+        "Validated particle cache",
+        "Particle Fluid Surface",
+        "Cleanup",
+        "OUT"
+      ],
+      "goal": "FLIP 粒子到时间稳定表面",
+      "inputs": "物理尺度、初始液体/持续源、容器、碰撞、速度、粒子分离度、表面和白水需求。",
+      "minimum_network": "Validated particle cache → Particle Fluid Surface → Cleanup → OUT",
+      "parameters_to_discover": [
+        "particle radius scale",
+        "体素",
+        "平滑",
+        "粒子属性",
+        "时间一致"
+      ],
+      "steps": [
+        "固定同一段粒子缓存，减少模拟变化对表面调参的干扰。",
+        "低分辨网格比较轮廓、细薄结构和孔洞。",
+        "连续回放检查时间闪烁，不用单帧好看代替动画通过。"
+      ],
+      "acceptance": [
+        "粒子和表面大形一致。",
+        "薄流、液滴和表面细节取舍符合镜头预算。"
+      ],
+      "troubleshooting": [
+        [
+          "液体穿容器",
+          "检查SDF/碰撞精度、壁厚、运动采样与时间步。"
+        ],
+        [
+          "水面抖动",
+          "先区别粒子模拟噪声还是meshing时间不稳定。"
+        ],
+        [
+          "粘性表现失真",
+          "先核对物理尺度和材料设置，不从教程直接复制数值。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-FLIP",
+        "S-FLIPMIN"
+      ],
+      "example": null,
+      "path": "wiki/recipes/fluid-surface.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-mpm-material",
+      "title": "雪沙材料的小体积 MPM 测试",
+      "topic": "mpm",
+      "skill": "houdini-mpm",
+      "contexts": [
+        "SOP",
+        "DOP"
+      ],
+      "aliases": [
+        "雪",
+        "沙",
+        "mpm材料"
+      ],
+      "node_candidates": [
+        "Small material source + simple collider",
+        "MPM Solver",
+        "Cache"
+      ],
+      "goal": "雪沙材料的小体积 MPM 测试",
+      "inputs": "材料目标（雪/沙/弹塑性等）、分辨率、尺度、碰撞、设备资源与当前安装能力。",
+      "minimum_network": "Small material source + simple collider → MPM Solver → Cache",
+      "parameters_to_discover": [
+        "材料模型",
+        "采样",
+        "尺度",
+        "碰撞",
+        "设备要求"
+      ],
+      "steps": [
+        "现场发现MPM节点和当前材料选项。",
+        "同一小域测试下落、压缩与回弹，记录资源占用。",
+        "通过后再扩展形状与数量；社区snow案例只作为目标参考。"
+      ],
+      "acceptance": [
+        "材料行为趋势符合目标。",
+        "版本/硬件要求与现场能力匹配，成本有测量。"
+      ],
+      "troubleshooting": [
+        [
+          "节点缺失",
+          "查Houdini版本/安装/授权与类型列表，不创建猜测名称。"
+        ],
+        [
+          "形状过硬或像水",
+          "检查材料模型、单位、初始密度与采样，不只调速度。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-MPM",
+        "S-VELLUM",
+        "S-INDEX",
+        "E-MPM"
+      ],
+      "example": null,
+      "path": "wiki/recipes/mpm-material.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-terrain-mask",
+      "title": "用坡度/地貌遮罩控制植被",
+      "topic": "terrain",
+      "skill": "houdini-terrain",
+      "contexts": [
+        "SOP",
+        "COP"
+      ],
+      "aliases": [
+        "坡度植被",
+        "岩石散布",
+        "地形遮罩"
+      ],
+      "node_candidates": [
+        "HeightField",
+        "Erode/masks",
+        "Scatter",
+        "Packed prototypes"
+      ],
+      "goal": "用坡度/地貌遮罩控制植被",
+      "inputs": "覆盖范围/米制尺度、分辨率、种子、坡度、侵蚀时间、输入DEM数据及坐标参考。",
+      "minimum_network": "HeightField → Erode/masks → Scatter → Packed prototypes",
+      "parameters_to_discover": [
+        "单位",
+        "mask层",
+        "坡度范围",
+        "密度",
+        "原型尺度"
+      ],
+      "steps": [
+        "先验证地形高度和水平尺度，再确认mask层的数值范围。",
+        "少量散布检查陡坡、谷地和边缘位置。",
+        "拓展密度后检查原型朝向与实例内存。"
+      ],
+      "acceptance": [
+        "mask与地貌对应，植被没有无意覆盖禁区。",
+        "原型尺寸与地形比例一致，输出层可追溯。"
+      ],
+      "troubleshooting": [
+        [
+          "地形太尖或比例怪",
+          "先检查水平/垂直尺度与高度值转换。"
+        ],
+        [
+          "遮罩不生效",
+          "检查同名字段、mask方向与后续节点覆盖。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-TERRAIN",
+        "S-TERRAINCOP",
+        "E-TERRAIN"
+      ],
+      "example": null,
+      "path": "wiki/recipes/terrain-mask.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-terrain-cop-route",
+      "title": "选择 SOP 或 Copernicus 地形路径",
+      "topic": "terrain",
+      "skill": "houdini-terrain",
+      "contexts": [
+        "SOP",
+        "COP"
+      ],
+      "aliases": [
+        "copernicus地形",
+        "heightfields22"
+      ],
+      "node_candidates": [
+        "Version probe",
+        "Workflow choice",
+        "Minimal terrain",
+        "Conversion/output"
+      ],
+      "goal": "选择 SOP 或 Copernicus 地形路径",
+      "inputs": "覆盖范围/米制尺度、分辨率、种子、坡度、侵蚀时间、输入DEM数据及坐标参考。",
+      "minimum_network": "Version probe → Workflow choice → Minimal terrain → Conversion/output",
+      "parameters_to_discover": [
+        "安装版本",
+        "图像/体积域",
+        "层",
+        "导入导出"
+      ],
+      "steps": [
+        "根据当前安装确认两种工作流是否存在。",
+        "需要在3D对象表面组织地形时继续查H22专题及对应节点，不从landing页猜参数。",
+        "先验证转换出口和单位，再迁移旧网络中的mask/erosion思路。"
+      ],
+      "acceptance": [
+        "所选路径的输入/输出表示明确。",
+        "未混用新旧节点参数，并保留转换测试证据。"
+      ],
+      "troubleshooting": [
+        [
+          "地形太尖或比例怪",
+          "先检查水平/垂直尺度与高度值转换。"
+        ],
+        [
+          "遮罩不生效",
+          "检查同名字段、mask方向与后续节点覆盖。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-TERRAIN",
+        "S-TERRAINCOP",
+        "E-TERRAIN"
+      ],
+      "example": null,
+      "path": "wiki/recipes/terrain-cop-route.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-kinefx-import",
+      "title": "角色导入后的骨架与 rest 验收",
+      "topic": "kinefx",
+      "skill": "houdini-character",
+      "contexts": [
+        "SOP"
+      ],
+      "aliases": [
+        "fbx骨架",
+        "rest pose",
+        "角色导入"
+      ],
+      "node_candidates": [
+        "Character import",
+        "Skeleton inspection",
+        "Rest/pose checks",
+        "Bone Deform"
+      ],
+      "goal": "角色导入后的骨架与 rest 验收",
+      "inputs": "关节名/父子关系、rest pose、动画pose、捕获权重、单位/轴、动画时间范围。",
+      "minimum_network": "Character import → Skeleton inspection → Rest/pose checks → Bone Deform",
+      "parameters_to_discover": [
+        "单位",
+        "关节name",
+        "父子关系",
+        "rest",
+        "权重",
+        "FPS"
+      ],
+      "steps": [
+        "读取骨架和权重，不先修饰动作。",
+        "验证静态rest下几何不异常变形。",
+        "用几个极限pose检查局部变换和权重。"
+      ],
+      "acceptance": [
+        "name/父子关系与输入说明一致。",
+        "静态和关键pose通过，再继续完整动画。"
+      ],
+      "troubleshooting": [
+        [
+          "角色爆炸",
+          "检查rest/animated输入错接、权重与骨架不匹配。"
+        ],
+        [
+          "重定向脚滑",
+          "先核对比例、根运动、时间采样和接触段，不只改脚位置。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-CHAR",
+        "C-KINEFX"
+      ],
+      "example": null,
+      "path": "wiki/recipes/kinefx-import.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-retarget",
+      "title": "重定向与根运动排错",
+      "topic": "kinefx",
+      "skill": "houdini-character",
+      "contexts": [
+        "SOP"
+      ],
+      "aliases": [
+        "重定向",
+        "脚滑",
+        "retarget"
+      ],
+      "node_candidates": [
+        "Source skeleton/animation + Target rest",
+        "Mapping",
+        "Retarget",
+        "Deform"
+      ],
+      "goal": "重定向与根运动排错",
+      "inputs": "关节名/父子关系、rest pose、动画pose、捕获权重、单位/轴、动画时间范围。",
+      "minimum_network": "Source skeleton/animation + Target rest → Mapping → Retarget → Deform",
+      "parameters_to_discover": [
+        "骨架对应",
+        "比例",
+        "根运动",
+        "接触段",
+        "重采样"
+      ],
+      "steps": [
+        "先对齐rest和关节映射，再接完整动画。",
+        "检查根运动、角色比例与FPS，定位滑步是空间还是时间问题。",
+        "对接触段密集查看，不仅检查几张关键姿态。"
+      ],
+      "acceptance": [
+        "关键关节对应正确。",
+        "接触与根运动的结果符合交付需要。"
+      ],
+      "troubleshooting": [
+        [
+          "角色爆炸",
+          "检查rest/animated输入错接、权重与骨架不匹配。"
+        ],
+        [
+          "重定向脚滑",
+          "先核对比例、根运动、时间采样和接触段，不只改脚位置。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-CHAR",
+        "C-KINEFX"
+      ],
+      "example": null,
+      "path": "wiki/recipes/retarget.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-usd-import",
+      "title": "SOP 资产进入 Solaris 的边界验证",
+      "topic": "solaris",
+      "skill": "houdini-solaris",
+      "contexts": [
+        "LOP",
+        "USD"
+      ],
+      "aliases": [
+        "sop import",
+        "usd比例",
+        "prim路径"
+      ],
+      "node_candidates": [
+        "OUT_SOP",
+        "SOP Import",
+        "Stage inspection",
+        "USD output"
+      ],
+      "goal": "SOP 资产进入 Solaris 的边界验证",
+      "inputs": "目标stage、prim paths、资产layer、reference/payload、variant、单位/时间、材质/灯光/相机。",
+      "minimum_network": "OUT_SOP → SOP Import → Stage inspection → USD output",
+      "parameters_to_discover": [
+        "prim路径",
+        "单位",
+        "purpose",
+        "transform",
+        "属性转primvar"
+      ],
+      "steps": [
+        "指定稳定OUT和prim命名规则。",
+        "在stage中核对prim类型、层级和transform，而不只看node参数。",
+        "测试一份导出读回，确认相对依赖可解析。"
+      ],
+      "acceptance": [
+        "SOP与USD尺寸/位置一致。",
+        "prim路径和所需primvar在导出后保留。"
+      ],
+      "troubleshooting": [
+        [
+          "材质不生效",
+          "检查匹配prim路径、binding层与强度、材质path和渲染delegate。"
+        ],
+        [
+          "导出后资产消失",
+          "检查payload加载、匿名层与相对路径。"
+        ],
+        [
+          "几何比例错",
+          "核对metersPerUnit、轴向和SOP导入变换。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-SOLARIS",
+        "S-LOPNODE",
+        "C-LOPS"
+      ],
+      "example": "examples/hom/usd_report.py",
+      "path": "wiki/recipes/usd-import.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-usd-binding",
+      "title": "USD 材质绑定不生效的排查",
+      "topic": "solaris",
+      "skill": "houdini-solaris",
+      "contexts": [
+        "LOP",
+        "USD"
+      ],
+      "aliases": [
+        "usd材质不生效",
+        "binding",
+        "assign material"
+      ],
+      "node_candidates": [
+        "Composed stage",
+        "Material path",
+        "Binding resolution",
+        "Render"
+      ],
+      "goal": "USD 材质绑定不生效的排查",
+      "inputs": "目标stage、prim paths、资产layer、reference/payload、variant、单位/时间、材质/灯光/相机。",
+      "minimum_network": "Composed stage → Material path → Binding resolution → Render",
+      "parameters_to_discover": [
+        "prim匹配",
+        "材质path",
+        "层强度",
+        "collection/inheritance",
+        "delegate"
+      ],
+      "steps": [
+        "在最终stage确认目标prim与材质存在。",
+        "区分直接、继承、collection和更强layer绑定；usd_report只列直接关系，不假装解析全部。",
+        "检查渲染器是否支持材质，再低分辨测试。"
+      ],
+      "acceptance": [
+        "最终绑定有解析证据，而不只是存在一根线。",
+        "测试图中目标对象使用预期材质。"
+      ],
+      "troubleshooting": [
+        [
+          "材质不生效",
+          "检查匹配prim路径、binding层与强度、材质path和渲染delegate。"
+        ],
+        [
+          "导出后资产消失",
+          "检查payload加载、匿名层与相对路径。"
+        ],
+        [
+          "几何比例错",
+          "核对metersPerUnit、轴向和SOP导入变换。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-SOLARIS",
+        "S-LOPNODE",
+        "C-LOPS"
+      ],
+      "example": null,
+      "path": "wiki/recipes/usd-binding.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-usd-variants",
+      "title": "用非破坏 USD 变体组织资产",
+      "topic": "solaris",
+      "skill": "houdini-solaris",
+      "contexts": [
+        "LOP",
+        "USD"
+      ],
+      "aliases": [
+        "variant",
+        "usd变体",
+        "资产版本"
+      ],
+      "node_candidates": [
+        "Asset layers",
+        "Variant composition",
+        "Shot overrides",
+        "Export"
+      ],
+      "goal": "用非破坏 USD 变体组织资产",
+      "inputs": "目标stage、prim paths、资产layer、reference/payload、variant、单位/时间、材质/灯光/相机。",
+      "minimum_network": "Asset layers → Variant composition → Shot overrides → Export",
+      "parameters_to_discover": [
+        "variant set/name",
+        "选择",
+        "layer强度",
+        "引用路径"
+      ],
+      "steps": [
+        "确定变体职责和默认选择，避免把不同资产版本混入同一不稳定路径。",
+        "在shot层进行覆盖，保留源资产。",
+        "检查每个变体的依赖和材质，再输出场景。"
+      ],
+      "acceptance": [
+        "切换变体时prim结构和依赖符合契约。",
+        "原资产不被覆盖，默认选择可复现。"
+      ],
+      "troubleshooting": [
+        [
+          "材质不生效",
+          "检查匹配prim路径、binding层与强度、材质path和渲染delegate。"
+        ],
+        [
+          "导出后资产消失",
+          "检查payload加载、匿名层与相对路径。"
+        ],
+        [
+          "几何比例错",
+          "核对metersPerUnit、轴向和SOP导入变换。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-SOLARIS",
+        "S-LOPNODE",
+        "C-LOPS"
+      ],
+      "example": null,
+      "path": "wiki/recipes/usd-variants.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-materialx-normal",
+      "title": "MaterialX 法线贴图与颜色语义验证",
+      "topic": "materials",
+      "skill": "houdini-render",
+      "contexts": [
+        "LOP",
+        "VOP"
+      ],
+      "aliases": [
+        "法线贴图",
+        "normal map",
+        "materialx"
+      ],
+      "node_candidates": [
+        "UV/primvar",
+        "Texture/vector data",
+        "Normal mapping",
+        "Material output"
+      ],
+      "goal": "MaterialX 法线贴图与颜色语义验证",
+      "inputs": "目标delegate、材质路径、贴图和UDIM、UV/primvars、图像语义与OCIO/view transform。",
+      "minimum_network": "UV/primvar → Texture/vector data → Normal mapping → Material output",
+      "parameters_to_discover": [
+        "纹理语义",
+        "UV名字",
+        "tangent convention",
+        "data colorspace"
+      ],
+      "steps": [
+        "确认读取UV和正确通道；normal应作为向量数据处理。",
+        "在中性灯光下对比贴图开/关，查看轴向是否反转。",
+        "检查接缝和粗糙度等其他因素是否掩盖normal问题。"
+      ],
+      "acceptance": [
+        "没有错误颜色转换。",
+        "凹凸方向和接缝符合目标材质。"
+      ],
+      "troubleshooting": [
+        [
+          "法线方向怪",
+          "确认贴图为向量数据、tangent convention与normal处理链。"
+        ],
+        [
+          "XPU和CPU外观不同",
+          "查当前功能支持与shader路径，不宣称两引擎全功能等价。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-MTLX",
+        "S-XPU",
+        "C-LOPS"
+      ],
+      "example": null,
+      "path": "wiki/recipes/materialx-normal.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-render-one-frame",
+      "title": "在全序列前执行可比的单帧预览",
+      "topic": "render",
+      "skill": "houdini-render",
+      "contexts": [
+        "LOP",
+        "ROP"
+      ],
+      "aliases": [
+        "单帧测试",
+        "render preview",
+        "karma"
+      ],
+      "node_candidates": [
+        "Validated stage/ROP",
+        "Low-cost single frame",
+        "Image review"
+      ],
+      "goal": "在全序列前执行可比的单帧预览",
+      "inputs": "相机、frame range、分辨率、renderer/device、输出路径、AOV、色彩、时长/内存预算。",
+      "minimum_network": "Validated stage/ROP → Low-cost single frame → Image review",
+      "parameters_to_discover": [
+        "相机",
+        "输出路径",
+        "帧",
+        "分辨率",
+        "采样",
+        "AOV",
+        "色彩"
+      ],
+      "steps": [
+        "读取现有ROP/renderer与输出依赖，确认写目录和覆盖权限。",
+        "低分辨率单帧渲染；记录所有参数和时间。",
+        "检查画面内容和技术输出后才扩大帧段。"
+      ],
+      "acceptance": [
+        "真实图像可打开，视图和目标一致。",
+        "未通过项有明确原因，不因工具成功直接渲染整片。"
+      ],
+      "troubleshooting": [
+        [
+          "返回成功但无图",
+          "查ROP输出、帧范围、依赖错误、内嵌业务结果与实际路径。"
+        ],
+        [
+          "黑帧",
+          "检查相机、visibility、灯光、材质和曝光，不只提高采样。"
+        ],
+        [
+          "超时后重复渲染",
+          "停止重放，先查询任务/文件状态；已有文件也可能来自旧版本。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-XPU",
+        "S-SOLARIS",
+        "R-CLI",
+        "R-VALID"
+      ],
+      "example": null,
+      "path": "wiki/recipes/render-one-frame.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-render-flicker",
+      "title": "渲染动画闪烁的分层定位",
+      "topic": "render",
+      "skill": "houdini-render",
+      "contexts": [
+        "LOP",
+        "ROP"
+      ],
+      "aliases": [
+        "闪烁",
+        "denoise flicker",
+        "动画验收"
+      ],
+      "node_candidates": [
+        "Cached scene",
+        "Short raw render sequence",
+        "Compare denoised",
+        "Review"
+      ],
+      "goal": "渲染动画闪烁的分层定位",
+      "inputs": "相机、frame range、分辨率、renderer/device、输出路径、AOV、色彩、时长/内存预算。",
+      "minimum_network": "Cached scene → Short raw render sequence → Compare denoised → Review",
+      "parameters_to_discover": [
+        "时间采样",
+        "稳定属性",
+        "灯光/纹理",
+        "采样",
+        "降噪"
+      ],
+      "steps": [
+        "先排除几何/粒子/属性的时间不稳定。",
+        "固定缓存和灯光，比较未降噪与降噪序列。",
+        "在问题帧段逐帧与连续回放结合定位，不一次调全部参数。"
+      ],
+      "acceptance": [
+        "问题归因于场景、采样或后处理的证据明确。",
+        "修复前后同条件序列可比较。"
+      ],
+      "troubleshooting": [
+        [
+          "返回成功但无图",
+          "查ROP输出、帧范围、依赖错误、内嵌业务结果与实际路径。"
+        ],
+        [
+          "黑帧",
+          "检查相机、visibility、灯光、材质和曝光，不只提高采样。"
+        ],
+        [
+          "超时后重复渲染",
+          "停止重放，先查询任务/文件状态；已有文件也可能来自旧版本。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-XPU",
+        "S-SOLARIS",
+        "R-CLI",
+        "R-VALID"
+      ],
+      "example": null,
+      "path": "wiki/recipes/render-flicker.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-texture-output",
+      "title": "Copernicus 程序贴图的导出验收",
+      "topic": "copernicus",
+      "skill": "houdini-copernicus",
+      "contexts": [
+        "COP"
+      ],
+      "aliases": [
+        "贴图输出",
+        "alpha",
+        "copernicus纹理"
+      ],
+      "node_candidates": [
+        "Low-res graph",
+        "Channel/range check",
+        "Final resolution",
+        "Image output"
+      ],
+      "goal": "Copernicus 程序贴图的导出验收",
+      "inputs": "图像/几何输入、层/通道、分辨率、像素/世界空间、颜色与数据语义、目标输出格式。",
+      "minimum_network": "Low-res graph → Channel/range check → Final resolution → Image output",
+      "parameters_to_discover": [
+        "分辨率",
+        "位深",
+        "通道",
+        "alpha",
+        "颜色/数据图"
+      ],
+      "steps": [
+        "先检查层、通道和数值范围，再提高分辨率。",
+        "记录normal/height/mask与颜色图的不同解释。",
+        "在目标材质中读回，检查tile、边缘与alpha。"
+      ],
+      "acceptance": [
+        "格式/通道/位深符合接收端。",
+        "实际材质使用结果与设计一致。"
+      ],
+      "troubleshooting": [
+        [
+          "合成边缘有黑边",
+          "检查alpha预乘约定和颜色处理。"
+        ],
+        [
+          "导出颜色与视口不同",
+          "查view transform、文件编码与接收端解释。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-COP",
+        "C-COPS",
+        "S-TERRAINCOP"
+      ],
+      "example": null,
+      "path": "wiki/recipes/texture-output.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-audio-drive",
+      "title": "音频或信号驱动几何参数",
+      "topic": "chops",
+      "skill": "houdini-chops",
+      "contexts": [
+        "CHOP"
+      ],
+      "aliases": [
+        "音频驱动",
+        "chop延迟",
+        "声控动画"
+      ],
+      "node_candidates": [
+        "Audio/signal",
+        "CHOP analysis/filter",
+        "Map channels",
+        "Parm/geometry"
+      ],
+      "goal": "音频或信号驱动几何参数",
+      "inputs": "输入采样率、时间范围、通道名、幅值范围、延迟预算、目标参数/几何绑定。",
+      "minimum_network": "Audio/signal → CHOP analysis/filter → Map channels → Parm/geometry",
+      "parameters_to_discover": [
+        "采样率",
+        "起点",
+        "范围",
+        "滤波延迟",
+        "通道命名"
+      ],
+      "steps": [
+        "先检查实际波形/听音和采样时间，不依赖文件名判断内容。",
+        "规范幅值并限制映射范围，记录滤波引入的延迟。",
+        "用事件附近连续回放验证图像与音频对齐。"
+      ],
+      "acceptance": [
+        "音画事件对齐有可定位证据。",
+        "不会把幅值驱动等同于音乐情绪理解。"
+      ],
+      "troubleshooting": [
+        [
+          "驱动总是晚一拍",
+          "检查重采样、起点和滤波延迟。"
+        ],
+        [
+          "表达式不工作",
+          "区分CHOP通道、SOP属性与参数表达式上下文。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "C-CHOPS",
+        "S-INDEX"
+      ],
+      "example": null,
+      "path": "wiki/recipes/audio-drive.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-wedge",
+      "title": "参数 Wedge 的安全批量产出",
+      "topic": "pdg",
+      "skill": "houdini-pdg",
+      "contexts": [
+        "TOP",
+        "ROP"
+      ],
+      "aliases": [
+        "wedge",
+        "变体批量",
+        "PDG输出覆盖"
+      ],
+      "node_candidates": [
+        "Wedge",
+        "Single proven work item",
+        "Declared outputs",
+        "Gather"
+      ],
+      "goal": "参数 Wedge 的安全批量产出",
+      "inputs": "输入清单、work item属性、依赖、输出文件命名、scheduler、许可证/内存/设备并发预算。",
+      "minimum_network": "Wedge → Single proven work item → Declared outputs → Gather",
+      "parameters_to_discover": [
+        "item属性",
+        "文件名",
+        "依赖",
+        "scheduler",
+        "并发资源"
+      ],
+      "steps": [
+        "先手动验证一个变体。",
+        "输出名加入资产/版本/item/seed，声明依赖并设置并发上限。",
+        "只对状态已知且可重复任务做重试，保留每项日志。"
+      ],
+      "acceptance": [
+        "不同item不会覆盖同一文件。",
+        "失败项可隔离重跑，成功项来源可追溯。"
+      ],
+      "troubleshooting": [
+        [
+          "输出互相覆盖",
+          "路径缺少wedge/item/版本字段。"
+        ],
+        [
+          "看起来成功但拿到旧缓存",
+          "核对输入指纹和cache命中依据。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-TOPS",
+        "S-TOPROP",
+        "C-TOPS"
+      ],
+      "example": null,
+      "path": "wiki/recipes/wedge.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-cache-readback",
+      "title": "检查缓存序列完整性并读回",
+      "topic": "cache-io",
+      "skill": "houdini-pdg",
+      "contexts": [
+        "SOP",
+        "ROP",
+        "USD"
+      ],
+      "aliases": [
+        "序列缺帧",
+        "缓存验收",
+        "bgeo读回"
+      ],
+      "node_candidates": [
+        "Expected manifest",
+        "File-structure check",
+        "Controlled readback",
+        "Attributes review"
+      ],
+      "goal": "检查缓存序列完整性并读回",
+      "inputs": "保存范围、格式/许可证限制、相对路径基准、可用空间、外部资产、颜色/单位/FPS。",
+      "minimum_network": "Expected manifest → File-structure check → Controlled readback → Attributes review",
+      "parameters_to_discover": [
+        "帧范围",
+        "frame token",
+        "版本",
+        "必需属性",
+        "空间"
+      ],
+      "steps": [
+        "使用validate_sequence仅检查存在性与非零大小。",
+        "通过另一受控读取路径解码并检查关键属性/字段。",
+        "比较输入版本和缓存清单，排除旧文件误命中。"
+      ],
+      "acceptance": [
+        "所有预期帧已检查，缺帧明确报告。",
+        "数据解码/语义和版本一致；结构检查不冒充内容检查。"
+      ],
+      "troubleshooting": [
+        [
+          "重开场景缓存找不到",
+          "核对$HIP/$JOB变化、相对路径和交付目录。"
+        ],
+        [
+          "只输出一帧",
+          "查frame token与范围模式。"
+        ],
+        [
+          "输出存在但过期",
+          "比较输入/版本清单而非仅mtime。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-CACHE",
+        "S-INDEX",
+        "S-SOLARIS",
+        "R-README"
+      ],
+      "example": null,
+      "path": "wiki/recipes/cache-readback.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-hda-package",
+      "title": "将已验证网络封装为可维护 HDA",
+      "topic": "hda-engine",
+      "skill": "houdini-hda",
+      "contexts": [
+        "SOP",
+        "HDA",
+        "ENGINE"
+      ],
+      "aliases": [
+        "封装hda",
+        "数字资产",
+        "接口"
+      ],
+      "node_candidates": [
+        "Validated subnet",
+        "Controlled parameters",
+        "Versioned HDA",
+        "Fresh-session test"
+      ],
+      "goal": "将已验证网络封装为可维护 HDA",
+      "inputs": "输入几何约定、暴露参数、命名空间/版本、外部依赖、Houdini与Engine插件版本、许可证。",
+      "minimum_network": "Validated subnet → Controlled parameters → Versioned HDA → Fresh-session test",
+      "parameters_to_discover": [
+        "namespace/version",
+        "输入契约",
+        "参数边界",
+        "依赖",
+        "定义权限"
+      ],
+      "steps": [
+        "确定稳定输入输出和少量高层参数。",
+        "封装为新版本资产，不覆盖未知共享定义。",
+        "用新会话测试默认、边界、无输入和依赖缺失情形。"
+      ],
+      "acceptance": [
+        "资产可加载并cook，依赖清单完整。",
+        "修改输入或参数后输出仍满足契约。"
+      ],
+      "troubleshooting": [
+        [
+          "本机正常他人失败",
+          "查未打包依赖、Labs版本、绝对路径与资产定义。"
+        ],
+        [
+          "UE方向/尺度不对",
+          "在接收端验证轴向/单位转换与实例变换。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-ASSETS",
+        "S-ENGINE",
+        "S-LABS",
+        "C-HDA"
+      ],
+      "example": null,
+      "path": "wiki/recipes/hda-package.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-unreal-delivery",
+      "title": "Houdini Engine / Unreal 交付前检查",
+      "topic": "hda-engine",
+      "skill": "houdini-hda",
+      "contexts": [
+        "SOP",
+        "HDA",
+        "ENGINE"
+      ],
+      "aliases": [
+        "unreal",
+        "ue5",
+        "engine接入"
+      ],
+      "node_candidates": [
+        "Version/dependency check",
+        "HDA cook in target",
+        "Bake/output verification"
+      ],
+      "goal": "Houdini Engine / Unreal 交付前检查",
+      "inputs": "输入几何约定、暴露参数、命名空间/版本、外部依赖、Houdini与Engine插件版本、许可证。",
+      "minimum_network": "Version/dependency check → HDA cook in target → Bake/output verification",
+      "parameters_to_discover": [
+        "插件/Houdini匹配",
+        "单位轴",
+        "材质",
+        "实例",
+        "Labs"
+      ],
+      "steps": [
+        "现场核对插件和Houdini支持组合，不给未经核实的版本承诺。",
+        "在接收端验证输入修改、cook与bake。",
+        "检查尺度、朝向、实例和材质，记录丢失字段。"
+      ],
+      "acceptance": [
+        "目标工程可实际复现，不只本机Houdini成功。",
+        "依赖与授权边界明确。"
+      ],
+      "troubleshooting": [
+        [
+          "本机正常他人失败",
+          "查未打包依赖、Labs版本、绝对路径与资产定义。"
+        ],
+        [
+          "UE方向/尺度不对",
+          "在接收端验证轴向/单位转换与实例变换。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-ASSETS",
+        "S-ENGINE",
+        "S-LABS",
+        "C-HDA"
+      ],
+      "example": null,
+      "path": "wiki/recipes/unreal-delivery.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-timeout-recovery",
+      "title": "CLI 超时后的不重放恢复流程",
+      "topic": "cli-contract",
+      "skill": "houdini-agent",
+      "contexts": [
+        "CLI",
+        "HOM"
+      ],
+      "aliases": [
+        "工具超时",
+        "timeout recovery",
+        "重复渲染"
+      ],
+      "node_candidates": [
+        "Unknown result",
+        "Session/app status",
+        "Read target/output",
+        "Reconcile"
+      ],
+      "goal": "CLI 超时后的不重放恢复流程",
+      "inputs": "任务名、已存在会话、当前场景与未保存状态；当前工具列表及输入 schema；输出白名单目录。",
+      "minimum_network": "Unknown result → Session/app status → Read target/output → Reconcile",
+      "parameters_to_discover": [
+        "任务名",
+        "原请求",
+        "已完成项",
+        "目标节点/文件",
+        "后台工作"
+      ],
+      "steps": [
+        "保留原请求和超时日志，标记unknown。",
+        "只读检查已有会话、应用状态和目标输出，防止第二个MCP抢占。",
+        "状态确认后决定显式重连或继续未完成项；不能自动重新发送原写操作。"
+      ],
+      "acceptance": [
+        "重复创建/渲染被避免。",
+        "已完成、失败和未知项分开记录。"
+      ],
+      "troubleshooting": [
+        [
+          "一调用就掉线",
+          "排查第二个 MCP 客户端；单桥接最新连接会替换旧连接，多个 home 不等于隔离应用。"
+        ],
+        [
+          "已有应用无法连接",
+          "CLI 不会向已有未启桥接的进程注入；保留现场并协调启用。"
+        ],
+        [
+          "工具超时",
+          "请求结果未知，不代表 Houdini 已停止；延长 CLI 超时也不保证上游无独立超时。"
+        ]
+      ],
+      "risk": "inspection-and-reconciliation",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "R-README",
+        "R-CLI",
+        "R-SKILL",
+        "R-SETUP",
+        "R-VALID",
+        "R-INSTALL"
+      ],
+      "example": null,
+      "path": "wiki/recipes/timeout-recovery.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-growth-visual",
+      "title": "植物/根系的可控生长可视化原型",
+      "topic": "time-state",
+      "skill": "houdini-simulation",
+      "contexts": [
+        "SOP",
+        "DOP",
+        "CHOP"
+      ],
+      "aliases": [
+        "植物生长",
+        "根系",
+        "生长动画"
+      ],
+      "node_candidates": [
+        "Growth structure/curves",
+        "Reveal/deform or state solver",
+        "Sweep/leaves",
+        "Cache"
+      ],
+      "goal": "植物/根系的可控生长可视化原型",
+      "inputs": "FPS、开始帧、子步、速度单位、初始状态、模拟重置范围、时间依赖的外部输入。",
+      "minimum_network": "Growth structure/curves → Reveal/deform or state solver → Sweep/leaves → Cache",
+      "parameters_to_discover": [
+        "生长顺序",
+        "进度",
+        "拓扑稳定",
+        "时间状态",
+        "实例策略"
+      ],
+      "steps": [
+        "先确定这是视觉演示还是生物模拟；演示优先可控进度，不宣称物理/生物真实性。",
+        "基于曲线长度/层级控制根茎展开；只有累积影响后续状态时采用Solver。",
+        "将叶片实例和渲染细节与主生长结构分开。"
+      ],
+      "acceptance": [
+        "生长顺序、速度和镜头目标一致。",
+        "连续帧无枝条突然跳出、拓扑闪烁或穿插失控。"
+      ],
+      "troubleshooting": [
+        [
+          "中间帧状态不对",
+          "检查是否依赖之前帧但未运行或缓存丢失。"
+        ],
+        [
+          "运动快慢异常",
+          "检查每帧量与每秒量、FPS、TimeInc及输入重定时。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "C-SOLVER",
+        "S-INDEX",
+        "E-ATTRACTOR"
+      ],
+      "example": "examples/vex/growth_accumulation.vfl",
+      "path": "wiki/recipes/growth-visual.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-data-lines",
+      "title": "科技数据流与网络路径动画",
+      "topic": "modeling",
+      "skill": "houdini-sop",
+      "contexts": [
+        "SOP"
+      ],
+      "aliases": [
+        "数据流",
+        "网络路径",
+        "科技线条",
+        "信息流"
+      ],
+      "node_candidates": [
+        "Anchor points",
+        "Curves",
+        "Resample/frame",
+        "Progress/instances",
+        "Render"
+      ],
+      "goal": "科技数据流与网络路径动画",
+      "inputs": "尺寸/单位、轮廓、曲线方向、封闭要求、法线/UV、目标面数、是否需要后续变形或体积碰撞。",
+      "minimum_network": "Anchor points → Curves → Resample/frame → Progress/instances → Render",
+      "parameters_to_discover": [
+        "路径层级",
+        "进度",
+        "方向",
+        "宽度",
+        "实例亮度"
+      ],
+      "steps": [
+        "先确认信息表达和主次路径，不用真实粒子模拟替代可控运动。",
+        "沿路径参数驱动亮点或线段进度，稳定采样和朝向。",
+        "增加渲染包装前检查拥挤区域和可读性。"
+      ],
+      "acceptance": [
+        "主次关系在目标镜头尺寸下可识别。",
+        "路径连接正确，速度和节奏有可控参数。"
+      ],
+      "troubleshooting": [
+        [
+          "Sweep 扭转",
+          "先检查曲线顺序、局部 frame 与接近共线的 up，不盲目增加面数。"
+        ],
+        [
+          "Boolean 崩坏",
+          "检查共面/退化/微小比例差，尝试预清理或替代表示。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-MODEL",
+        "S-BOX",
+        "S-XFORM",
+        "C-ATTR"
+      ],
+      "example": null,
+      "path": "wiki/recipes/data-lines.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-procedural-laser",
+      "title": "反射/折射光路线的学习与原型入口",
+      "topic": "vex",
+      "skill": "houdini-vex",
+      "contexts": [
+        "SOP",
+        "VEX",
+        "VOP"
+      ],
+      "aliases": [
+        "激光",
+        "反射",
+        "折射",
+        "laser"
+      ],
+      "node_candidates": [
+        "Ray origin/direction",
+        "Intersection iteration",
+        "Curve segments",
+        "Shading"
+      ],
+      "goal": "反射/折射光路线的学习与原型入口",
+      "inputs": "Run Over、输入编号、每个输入的属性与坐标空间、必要的 spare parameters、是否有时间反馈。",
+      "minimum_network": "Ray origin/direction → Intersection iteration → Curve segments → Shading",
+      "parameters_to_discover": [
+        "表面法线",
+        "介质",
+        "迭代上限",
+        "碰撞epsilon",
+        "出射规则"
+      ],
+      "steps": [
+        "先读官方相交/方向计算函数与作者案例公开介绍；当前未复现Entagma视频内部网络。",
+        "用一个平面或简单玻璃体做几何路线测试，显式限制反弹次数。",
+        "将几何光路线与真正物理渲染效果区分，不把可视化曲线当完整光学求解。"
+      ],
+      "acceptance": [
+        "最小几何下反射方向可校验。",
+        "没有无限循环/零长度段，说明物理简化范围。"
+      ],
+      "troubleshooting": [
+        [
+          "代码不报错但没效果",
+          "确认 Run Over、group、输入编号、缺属性和通道。"
+        ],
+        [
+          "某几帧 NaN",
+          "检查除零、normalize零向量、非法根号和溢出。"
+        ],
+        [
+          "每次 cook 都继续形变",
+          "在不需要累积的地方误用反馈或修改后的 P；改读 rest。"
+        ]
+      ],
+      "risk": "scene-write-or-cook",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "S-VEX",
+        "C-VEX",
+        "C-CHEAT",
+        "C-JOY",
+        "J-VEX",
+        "E-LASER"
+      ],
+      "example": null,
+      "path": "wiki/recipes/procedural-laser.md",
+      "runtime_tested": false
+    },
+    {
+      "id": "recipe-review-delivery",
+      "title": "Agent 输出交付前的证据审查",
+      "topic": "acceptance",
+      "skill": "houdini-debug",
+      "contexts": [
+        "ALL"
+      ],
+      "aliases": [
+        "交付验收",
+        "自检",
+        "质量检查"
+      ],
+      "node_candidates": [
+        "Brief",
+        "Technical outputs",
+        "Temporal review",
+        "Visual review",
+        "Report"
+      ],
+      "goal": "Agent 输出交付前的证据审查",
+      "inputs": "原始brief、参考图/效果、限制、目标节点和输出路径、实际版本、评估帧段。",
+      "minimum_network": "Brief → Technical outputs → Temporal review → Visual review → Report",
+      "parameters_to_discover": [
+        "证据路径",
+        "实际版本",
+        "检查范围",
+        "结果等级"
+      ],
+      "steps": [
+        "按acceptance模板逐项填pass/fail/unknown，不提前填通过。",
+        "所有pass连接到实际文件、日志、图像或帧段。",
+        "对未运行/未观看部分说明下一项最低成本验证。"
+      ],
+      "acceptance": [
+        "报告没有把脚本编译当Houdini通过。",
+        "每个通过项有证据，未覆盖范围明确。"
+      ],
+      "troubleshooting": [
+        [
+          "工具报告成功但任务未达成",
+          "回到brief和实际输出逐项评估。"
+        ],
+        [
+          "只有几张截图",
+          "明确时间验收不足；补连续片段而非夸大截图结论。"
+        ]
+      ],
+      "risk": "inspection",
+      "coverage": "recipe-design-not-runtime-tested",
+      "sources": [
+        "R-VALID",
+        "S-GEO",
+        "S-SOLARIS",
+        "S-XPU"
+      ],
+      "example": null,
+      "path": "wiki/recipes/review-delivery.md",
+      "runtime_tested": false
+    }
+  ]
+}
