@@ -1,9 +1,8 @@
-name: Verify and materialize agent kit (temporary)
+name: Verify agent kit and compare CLI baseline (temporary)
 on:
   push:
     branches: [automation/houdini-agent-kit-import-20260911]
     paths:
-      - .agent-kit-import/**
       - .github/workflows/agent-kit-import.yml
 permissions:
   contents: write
@@ -38,21 +37,61 @@ jobs:
           python3 "$RUNNER_TEMP/houdini-kit-smoke/.agents/skills/houdini-agent/tools/query.py" search '布料穿透' --limit 3
       - name: Install existing CLI dependencies without install hooks
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Run existing CLI test suite
-        run: npm test
+      - name: Compare original CLI failures against clean main commit
+        run: |
+          python3 - <<'PY'
+          import json, os, platform, re, subprocess
+          from pathlib import Path
+          root = Path.cwd()
+          base_sha = '57a8e81de4a8f372f6dda4de6ab2fffee11e4bb9'
+          temp = Path(os.environ['RUNNER_TEMP'])
+          baseline = temp / 'houdini-cli-baseline'
+          subprocess.run(['git', 'fetch', '--no-tags', '--depth=1', 'origin', base_sha], check=True)
+          subprocess.run(['git', 'worktree', 'add', '--detach', str(baseline), base_sha], check=True)
+          subprocess.run(['git', 'diff', '--exit-code', base_sha, '--', 'src', 'tests', 'assets', 'scripts', 'package.json', 'package-lock.json', 'skills/houdini-cli'], check=True)
+          subprocess.run(['npm', 'ci', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=baseline, check=True)
+          def run_suite(label, directory):
+              result = subprocess.run(['npm', 'test'], cwd=directory, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=180)
+              (temp / (label + '-npm-test.log')).write_text(result.stdout, encoding='utf-8')
+              failures = sorted(re.findall(r'^not ok\s+\d+\s+-\s+(.+)$', result.stdout, flags=re.M))
+              counts = {k: int(v) for k, v in re.findall(r'^# (tests|pass|fail|skipped) (\d+)$', result.stdout, flags=re.M)}
+              details = []
+              lines = result.stdout.splitlines()
+              for index, line in enumerate(lines):
+                  if re.match(r'^not ok\s+\d+\s+-', line):
+                      block = []
+                      for later in lines[index:index+100]:
+                          if block and later.startswith('# Subtest:'):
+                              break
+                          block.append(later)
+                      details.append('\n'.join(block)[:10000])
+              return {'exit_code': result.returncode, 'counts': counts, 'failures': failures, 'failure_details': details}
+          candidate = run_suite('candidate', root)
+          original = run_suite('baseline', baseline)
+          comparable = candidate['counts'].get('tests', 0) > 0 and candidate['counts'] == original['counts'] and candidate['exit_code'] == original['exit_code'] and candidate['failures'] == original['failures']
+          report = {'baseline_commit': base_sha, 'node': subprocess.check_output(['node', '--version'], text=True).strip(), 'platform': platform.platform(), 'cli_source_and_tests_unchanged': True, 'candidate': candidate, 'baseline': original, 'same_outcome': comparable, 'houdini_runtime_tested': False}
+          (root / '.agent-kit-import' / 'cli-comparison.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          if not comparable:
+              raise SystemExit('Candidate and baseline differ; investigate before publishing.')
+          if candidate['exit_code']:
+              print('::warning::Original CLI test failures reproduce on clean main; agent-kit tests passed. See cli-comparison.json; this is not a fully green CLI suite.')
+          PY
       - name: Check existing CLI and npm package
         run: |
           npm run check
           npm pack --dry-run
-      - name: Publish verified content to temporary branch only
+      - name: Publish verified kit and comparison to temporary branch only
         run: |
           set -euo pipefail
-          git add -- agent-kit README.md
+          git add -- agent-kit README.md .agent-kit-import/cli-comparison.json
           test "$(git write-tree --prefix=agent-kit/)" = '5de353d1bcd1570122beae0b215816546b1a10ba'
-          git diff --cached --name-only | grep -Ev '^(agent-kit/|README[.]md$)' && exit 1 || true
+          if git diff --cached --name-only | grep -Ev '^(agent-kit/|README[.]md$|[.]agent-kit-import/cli-comparison[.]json$)'; then
+            exit 1
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'build: materialize and verify Houdini Agent Kit'
+          git commit -m 'build: materialize verified Houdini Agent Kit and baseline comparison'
           git push origin HEAD:refs/heads/automation/houdini-agent-kit-import-20260911
           git rev-parse HEAD
           git rev-parse HEAD:agent-kit
