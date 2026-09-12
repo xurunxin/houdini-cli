@@ -27,6 +27,22 @@ test('skills reject junction/symlink escape', async () => {
   await symlink(outside, join(root, '.agents'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(installSkills(metadata, { target: root }), { code: 'UNSAFE_TARGET' });
 });
+
+test('domain installation includes complete dependencies and preflights resource conflicts', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'cli-domain-'));
+  const base = join(root, '.agents', 'skills');
+  await installSkills(metadata, { target: root, name: 'houdini-vellum', dryRun: true });
+  await assert.rejects(readFile(join(base, 'houdini-vellum', 'SKILL.md')), { code: 'ENOENT' });
+  await installSkills(metadata, { target: root, name: 'houdini-vellum' });
+  for (const file of ['houdini-cli/SKILL.md', 'houdini-vellum/SKILL.md', 'houdini-agent/wiki/12-vellum.md', 'houdini-agent/tools/query.py', 'houdini-agent/templates/acceptance.json']) {
+    assert.ok((await readFile(join(base, file), 'utf8')).length);
+  }
+  const conflict = join(base, 'houdini-agent', 'wiki', '12-vellum.md');
+  await writeFile(conflict, 'custom wiki');
+  await assert.rejects(installSkills(metadata, { target: root, name: 'houdini-pyro' }), { code: 'SKILL_CONFLICT' });
+  await assert.rejects(readFile(join(base, 'houdini-pyro', 'SKILL.md')), { code: 'ENOENT' });
+  assert.equal(await readFile(conflict, 'utf8'), 'custom wiki');
+});
 test('configuration saves in explicit home and retains runtime overrides', async () => {
   const home = await mkdtemp(join(tmpdir(), 'cli-config-'));
   const config = await loadConfig(metadata, { home, appPath: 'test' });

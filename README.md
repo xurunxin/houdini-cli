@@ -85,17 +85,23 @@ skills 默认安装到调用者项目 `.agents/skills/houdini-cli/SKILL.md`；`-
 
 ## Houdini Agent Wiki 与领域 Skills
 
-[Houdini Agent Kit](agent-kit/README.md) 提供 32 个领域入口、40 个任务配方、20 个可选 Skills、HOM/VEX 示例及离线检索和验收工具。它是 CLI 之上的知识层，沿用实时工具发现和任务级会话，不修改现有 `houdini-cli` Skill 或 MCP 配置。
+[Houdini Agent Kit](agent-kit/README.md) 的 Wiki、领域 Skills、HOM/VEX 示例和辅助工具随 CLI 分发。CLI 自身 skill 会引导 agent 先检索知识，再发现现场能力并执行。
 
-从仓库根目录使用（Python 3.10+；目标项目目录须已存在）：
+从任意目录查询，无需 Houdini、MCP、setup 或 Python：
 
 ```powershell
-python agent-kit/tools/install_kit.py --target "D:/MyProject" --agent codex --profile core --dry-run
-python agent-kit/tools/install_kit.py --target "D:/MyProject" --agent codex --profile core
-python agent-kit/skills/houdini-agent/tools/query.py search "布料穿透" --limit 3
+houdini-cli skills list
+houdini-cli skills read houdini-agent
+houdini-cli skills read houdini-vellum
+houdini-cli wiki search "穿透" --limit 3
+houdini-cli wiki read recipes/cloth-penetration
+houdini-cli wiki list
+houdini-cli skills read houdini-agent examples/hom/runtime_probe.py
+houdini-cli skills install --name houdini-vellum --target "D:/MyProject" --dry-run
+houdini-cli skills install --name houdini-vellum --target "D:/MyProject"
 ```
 
-推荐 `core`，仅激活一个路由 Skill，但保留全部知识。`--profile all --agent all` 可安装所有领域 Skills 到 Codex 与 Claude 项目目录。本知识包从仓库检出目录安装，不包含在现有 npm 发布文件集合中；原 `houdini-cli skills install` 仍只安装原来的 CLI Skill。
+`skills read <name> [resource]` 返回技能正文或相对资源内容；`wiki search` 按字面关键词搜索正文，返回有限命中摘要，再按 id 读取页面。命令输出 JSON。`skills install --name <技能名>` 自动安装 CLI skill 与 `houdini-agent` 依赖及完整资源，支持原有 `--agent`、`--force` 和冲突保护；默认不带 `--name` 仍只安装 CLI skill。辅助 Python 脚本仅在需要实际运行时要求 Python 3.10+。
 
 [Wiki 目录](agent-kit/skills/houdini-agent/wiki/README.md) · [集成说明](agent-kit/INTEGRATION.md) · [验收边界](agent-kit/VALIDATION.md)。知识库和离线测试不代表已通过 Houdini 场景编辑、模拟或渲染验收。
 

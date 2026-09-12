@@ -5,6 +5,7 @@ import { metadata, doctor, setup, launch, server } from './app.mjs';
 import { CliError, ensure, positiveInt, readJson, loadConfig, saveConfig, output } from './core.mjs';
 import { withMcp, listAll, callTool } from './mcp.mjs';
 import { installSkills } from './skills.mjs';
+import { listSkills, readSkill, listWiki, searchWiki, readWiki } from './knowledge.mjs';
 import { disableCodex } from './integration.mjs';
 import { startSession, sessionStatus, endSession, withSession, assertNoSession } from './session.mjs';
 import { ensureApplication, closeOwnedApplication, inspectApplication } from './app-lifecycle.mjs';
@@ -120,10 +121,19 @@ program.command('batch <file>').description('在一个短暂 MCP 会话顺序运
 const resources = program.command('resources').description('按需访问 MCP 资源（上游支持时）');
 resources.command('list').action(wrap(async (_, command) => mcp(command, async (client, request) => ({ resources: await listAll(client, 'listResources', 'resources', request) }))));
 resources.command('read <uri>').action(wrap(async (uri, _, command) => mcp(command, async (client, request) => ({ result: await client.readResource({ uri }, request) }))));
-const skills = program.command('skills').description('将内置 skill 安装到调用者的项目');
-skills.command('list').action(wrap(async () => ({ skills: [{ name: metadata.id, description: `${metadata.label} CLI 操作与环境初始化` }] })));
+const skills = program.command('skills').description('发现、读取和安装 CLI 与 Houdini 领域技能（离线）');
+skills.command('list').action(wrap(async () => ({ skills: await listSkills() })));
+skills.command('read <name> [resource]').description('读取技能或其相对路径资源；省略 resource 读取 SKILL.md')
+  .action(wrap(async (name, resource) => ({ skill: await readSkill(name, resource) })));
+const wiki = program.command('wiki').description('离线查询 agent-kit Houdini 模块与任务配方，无需应用或 MCP');
+wiki.command('list').action(wrap(async () => ({ pages: await listWiki() })));
+wiki.command('search <query>').option('--limit <number>', '最多返回多少条命中', positiveInt, 10)
+  .action(wrap(async (query, opts) => ({ results: await searchWiki(query, opts) })));
+wiki.command('read <id>').description('读取页面，如 12-vellum 或 recipes/cloth-inflate')
+  .action(wrap(async id => ({ page: await readWiki(id) })));
 skills.command('install').description('默认写入当前项目 .agents/skills；保留定制文件')
   .option('--target <directory>', '已有目标项目目录，默认 cwd').option('--agent <agent>', 'codex、claude 或 all', 'codex')
+  .option('--name <name>', '安装指定技能；领域技能自动包含 houdini-agent 依赖')
   .option('--dry-run', '只显示安装计划').option('--force', '覆盖同名定制 SKILL.md')
   .action(wrap(async opts => installSkills(metadata, opts)));
 const integration = program.command('integration').description('迁移原来的固定 MCP 配置');

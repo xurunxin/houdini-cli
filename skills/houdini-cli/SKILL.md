@@ -1,9 +1,18 @@
 ---
 name: houdini-cli
-description: 通过 houdini-cli 按需查询或修改 Houdini 节点网络、执行场景脚本，以及初始化 Houdini MCP、启动应用桥接和诊断环境。
+description: 通过 houdini-cli 获取 Houdini 领域技能、查询模块与任务配方 Wiki，按需查询或修改节点网络、执行场景脚本，以及初始化 MCP、启动应用桥接和诊断环境。
 ---
 
 使用终端中的 `houdini-cli`。以用户的目标任务为生命周期单位：任务内复用应用、桥接和 MCP，避免每个工具调用重新启动它们。
+
+遇到 Houdini 模块、节点工作流、模拟、渲染或故障任务时，先通过 CLI 学习，再连接现场执行：
+
+1. `houdini-cli skills list` 查看领域说明，`houdini-cli skills read houdini-agent` 读取知识路由；按任务读取匹配技能，例如 `houdini-cli skills read houdini-vellum`。
+2. `houdini-cli wiki search "穿透" --limit 3` 查询用户问题；多词无命中时改用模块名或关键术语。用返回的页面 id 执行 `houdini-cli wiki read 12-vellum` 或 `houdini-cli wiki read recipes/cloth-penetration`，只读取相关页面。`wiki list` 可查看完整目录。
+3. 技能中的相对 Wiki 链接可用 `wiki read` 读取；其他依赖通过 `houdini-cli skills read houdini-agent templates/acceptance.json` 等相对资源路径获取。`skills read` 返回资源目录；Python 查询器的知识检索步骤可直接使用 `wiki search`，无需安装 Python。需要运行辅助脚本时，先安装技能资源并核对脚本说明与 Python 环境。
+4. 需要把技能持久安装到项目时使用 `houdini-cli skills install --name houdini-vellum --target <project>`；自动包含 `houdini-agent` 的 Wiki、示例、工具及自身 CLI skill，保证相对引用完整。默认不带 `--name` 仍只安装 `houdini-cli`。
+
+以上知识命令离线运行，无需 Houdini、许可证、setup 或 MCP 会话。知识说明是学习资料；执行前仍须读取现场工具 schema、节点类型和参数，并以真实 cook、缓存或渲染结果验收。
 
 多步骤任务先 `session status` 查看已有会话，然后 `session start <task-name> --launch-app`。同名任务复用会话；应用已运行时优先复用。不同目标占用同一个 CLI 状态目录时返回冲突，应协调原任务，不能结束它来抢占连接。环境只在缺失或损坏时 setup，无需每个任务重新安装。
 
