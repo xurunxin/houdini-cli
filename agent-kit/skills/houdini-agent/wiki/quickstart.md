@@ -1,5 +1,7 @@
 # 快速上手：从离线检索到一次可核对的调用
 
+本页是首次接入的示例，不是每项任务的固定流程。已知领域或知识卡时直接使用；复用已核对的会话、schema 和现有网络，只执行当前任务需要的部分。
+
 ## 1. 先查询，不启动 Houdini
 
 以下在解压后的项目根目录执行；安装后的路径改用 `.agents/skills/houdini-agent`。`python` 需为 Python 3.10+。
@@ -76,7 +78,7 @@ python skills/houdini-agent/tools/inspect_result.py runtime-probe-result.json
 
 ## 5. 做小网络 smoke（可选，属于真实写操作）
 
-先读取 [示例前提](../examples/README.md)。复制 `build-sop-smoke.json` 到任务工作目录，明确设置允许修改与cook后，才将两个allow字段设true，再按上节打包/调用 `build_sop_smoke.py`。
+仅需要验证基础建网能力时执行本例，不把它作为每次编辑或渲染的前置步骤。先读取 [示例前提](../examples/README.md)。复制 `build-sop-smoke.json` 到任务工作目录，明确设置允许修改与cook后，才将两个allow字段设true，再按上节打包/调用 `build_sop_smoke.py`。
 
 它仅创建 `/obj/AGENT_smoke01` 内的 Box → Transform → OUT，并检查包围盒；不删除/清空/保存/渲染。若名称已存在就停止。超时后先查该路径，不换个名字盲目重跑。验收该例只说明基本网络操作有效，不代表Vellum/Pyro/Karma已通过。
 
